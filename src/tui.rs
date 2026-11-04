@@ -174,7 +174,7 @@ impl Screen {
         Ok(Self { color: auto_color() })
     }
 
-    pub fn colored(&self) -> bool { self.color }
+    pub fn set_color(&mut self, enabled: bool) { self.color = enabled && auto_color(); }
 
     fn render(&self, data: &str) {
         let mut stdout = io::stdout().lock();

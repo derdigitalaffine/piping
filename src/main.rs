@@ -17,12 +17,18 @@ mod trace;
 mod trace_socket;
 #[cfg(feature = "tui")]
 mod tui;
+#[cfg(feature = "tui")]
+mod console;
 
 use cli::Parsed;
 
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let code = match args.first().map(String::as_str) {
+    let menu = args.is_empty() || args.first().is_some_and(|x| x == "tui")
+        && args.iter().skip(1).all(|x| x == "--no-color");
+    let code = if menu {
+        result(open_menu(if args.is_empty() { &[] } else { &args[1..] }))
+    } else { match args.first().map(String::as_str) {
         Some("discover") => result(discovery::run(&args[1..])),
         Some("neighborhood") => result(neighborhood::run(&args[1..])),
         Some("trace") => result(trace::run(&args[1..])),
@@ -41,8 +47,18 @@ fn main() {
                 2
             }
         },
-    };
+    } };
     std::process::exit(code);
+}
+
+#[cfg(feature = "tui")]
+fn open_menu(args: &[String]) -> Result<i32, String> {
+    console::run(args)
+}
+
+#[cfg(not(feature = "tui"))]
+fn open_menu(_args: &[String]) -> Result<i32, String> {
+    Err("interactive menu was not built; cargo install --path . --features tui".into())
 }
 
 fn result(outcome: Result<i32, String>) -> i32 {

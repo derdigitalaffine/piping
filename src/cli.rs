@@ -350,6 +350,8 @@ pub fn help() -> &'static str {
     concat!(
         "pipi 0.2.0 — Linux ICMP Echo/trace/neighbor diagnostics (Rust)\n",
         "USAGE:\n",
+        "  pipi                                Interactive menu (feature tui, needs TTY)\n",
+        "  pipi tui                            Interactive menu without HOST\n",
         "  pipi [OPTIONS] HOST                 Classic ping, Ctrl-C for summary\n",
         "  pipi fast [OPTIONS] HOST            Bounded high-frequency ping\n",
         "  pipi range [OPTIONS] CIDR|START-END ICMP echo sweep\n",
@@ -370,7 +372,8 @@ pub fn help() -> &'static str {
         "  --size N            ICMP data bytes (16..1400; default 56)\n",
         "  --output FORMAT     text|jsonl|csv\n",
         "  --ascii             Force ASCII smoke graph\n",
-        "  --no-color          Disable terminal colors (also honors NO_COLOR)\n\n",
+        "  --no-color          Disable terminal colors (also honors NO_COLOR)\n",
+        "  TUI menu: Arrow keys / Tab / F5 / Ctrl-R, double-confirm active ARP\n\n",
         "FAST/RANGE:\n",
         "  --pps N             Global rate cap (1..1000; default 20)\n",
         "  --jobs N            Max outstanding probes (1..128)\n",
