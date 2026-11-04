@@ -497,12 +497,10 @@ impl TraceLive {
             return false;
         };
         let mut parts = payload.splitn(3, '\t');
-        let (Some(ttl), Some(cycle), Some(row)) = (parts.next(), parts.next(), parts.next())
-        else {
+        let (Some(ttl), Some(cycle), Some(row)) = (parts.next(), parts.next(), parts.next()) else {
             return false;
         };
-        let (Ok(ttl), Ok(cycle)) = (ttl.parse::<usize>(), cycle.parse::<u32>())
-        else {
+        let (Ok(ttl), Ok(cycle)) = (ttl.parse::<usize>(), cycle.parse::<u32>()) else {
             return false;
         };
         if !(1..=32).contains(&ttl) || cycle == 0 || row.len() > 512 {
@@ -893,7 +891,9 @@ impl Dashboard {
                     } else {
                         rows.push(format!(
                             "STATE {} | {}s | {} events",
-                            state, run.started.elapsed().as_secs(), run.total
+                            state,
+                            run.started.elapsed().as_secs(),
+                            run.total
                         ));
                         rows.push(format!(
                             "COMMAND pipi {}",

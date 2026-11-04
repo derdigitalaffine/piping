@@ -259,7 +259,9 @@ impl Screen {
             return; // Identical frame: zero terminal output, even on idle ticks.
         }
         let mut stdout = io::stdout().lock();
-        let _ = stdout.write_all(patch.as_bytes()).and_then(|_| stdout.flush());
+        let _ = stdout
+            .write_all(patch.as_bytes())
+            .and_then(|_| stdout.flush());
     }
 
     pub fn show_lines(&self, title: &str, rows: &[String], footer: &str) {
@@ -340,10 +342,20 @@ mod tests {
         assert!(update.contains("50%"));
         assert_eq!(update.matches("\x1b[2K").count(), 1);
         // Removed lines are erased individually rather than leaving stale hops.
-        let removed = repaint(&mut cache, "pipi TRACE\nHOP  ADDRESS LOSS\nCtrl-C", (80, 24), false);
+        let removed = repaint(
+            &mut cache,
+            "pipi TRACE\nHOP  ADDRESS LOSS\nCtrl-C",
+            (80, 24),
+            false,
+        );
         assert!(!removed.contains("\x1b[2J"));
         assert!(removed.contains("\x1b[4;1H\x1b[2K"));
-        assert_eq!(repaint(&mut cache, "same", (100, 24), false).matches("\x1b[2J").count(), 1);
+        assert_eq!(
+            repaint(&mut cache, "same", (100, 24), false)
+                .matches("\x1b[2J")
+                .count(),
+            1
+        );
     }
 
     #[test]

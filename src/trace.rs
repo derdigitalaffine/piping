@@ -118,7 +118,7 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             "--live-rows" => {
                 options.live_rows = true;
                 options.smoke = true;
-            },
+            }
             "--ascii" => {
                 options.ascii = true;
                 options.smoke = true;
@@ -286,13 +286,19 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
             };
             let prefix = format!(
                 "{:>2}  {:<11} {:>3.0}% {:>5}",
-                i + 1, addr, hop.stats.loss_percent(), avg
+                i + 1,
+                addr,
+                hop.stats.loss_percent(),
+                avg
             );
             let available = width.saturating_sub(prefix.chars().count() + 2);
             out.push(format!(
                 "{prefix} {}",
-                if smoke { graph::sparkline(&hop.recent, available, ascii) }
-                else { String::new() }
+                if smoke {
+                    graph::sparkline(&hop.recent, available, ascii)
+                } else {
+                    String::new()
+                }
             ));
         }
         return out;
@@ -302,7 +308,11 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
         for (i, hop) in hops.iter().enumerate() {
             let ip = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
             let addr: String = ip.chars().take(20).collect();
-            let last = hop.recent.back().copied().flatten()
+            let last = hop
+                .recent
+                .back()
+                .copied()
+                .flatten()
                 .map_or_else(|| "-".to_owned(), |ms| format!("{ms:.1}"));
             let avg = if hop.stats.received == 0 {
                 "-".to_owned()
@@ -311,13 +321,21 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
             };
             let prefix = format!(
                 "{:>2}  {:<20} {:>4.0}%  {:>4} {:>6} {:>6}",
-                i + 1, addr, hop.stats.loss_percent(), hop.stats.sent, last, avg
+                i + 1,
+                addr,
+                hop.stats.loss_percent(),
+                hop.stats.sent,
+                last,
+                avg
             );
             let available = width.saturating_sub(prefix.chars().count() + 2).min(40);
             out.push(format!(
                 "{prefix} {}",
-                if smoke { graph::sparkline(&hop.recent, available, ascii) }
-                else { String::new() }
+                if smoke {
+                    graph::sparkline(&hop.recent, available, ascii)
+                } else {
+                    String::new()
+                }
             ));
         }
         return out;
@@ -329,16 +347,29 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
     });
     for (i, hop) in hops.iter().enumerate() {
         let ip = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
-        let last = hop.recent.back().copied().flatten()
+        let last = hop
+            .recent
+            .back()
+            .copied()
+            .flatten()
             .map_or_else(|| "-".to_owned(), |ms| format!("{ms:.1}"));
         let fmt = |value: f64| -> String {
-            if hop.stats.received == 0 { "-".into() }
-            else { format!("{value:.1}") }
+            if hop.stats.received == 0 {
+                "-".into()
+            } else {
+                format!("{value:.1}")
+            }
         };
         let mut row = format!(
             "{:>2}  {:<23} {:>5.1}  {:>4} {:>6} {:>6} {:>6} {:>6}",
-            i + 1, ip, hop.stats.loss_percent(), hop.stats.sent,
-            last, fmt(hop.stats.mean), fmt(hop.stats.min), fmt(hop.stats.max)
+            i + 1,
+            ip,
+            hop.stats.loss_percent(),
+            hop.stats.sent,
+            last,
+            fmt(hop.stats.mean),
+            fmt(hop.stats.min),
+            fmt(hop.stats.max)
         );
         if smoke {
             let available = width.saturating_sub(row.chars().count() + 2).min(36);
@@ -382,10 +413,11 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     }
     // MTR-like behavior by default on interactive TTYs. Scripts and pipes keep
     // conventional per-cycle output; --text explicitly opts out on a terminal.
-    let full_screen = options.tui || (
-        !options.text && !options.live_rows
-            && cfg!(feature = "tui") && io::stdout().is_terminal()
-    );
+    let full_screen = options.tui
+        || (!options.text
+            && !options.live_rows
+            && cfg!(feature = "tui")
+            && io::stdout().is_terminal());
     crate::colour::configured(!full_screen && !options.live_rows);
     let target = cli::resolve(&options.target, options.family).map_err(|e| e.to_string())?;
     let sock = TraceSocket::new(target.is_ipv6())?;
@@ -450,9 +482,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
                 }
             };
             if options.live_rows {
-                crate::engine::emit(&live_update(
-                    &hops, usize::from(ttl), cycle, options.ascii
-                ));
+                crate::engine::emit(&live_update(&hops, usize::from(ttl), cycle, options.ascii));
             }
             #[cfg(feature = "tui")]
             if let Some(screen) = screen.as_ref() {
@@ -462,7 +492,8 @@ pub fn run(args: &[String]) -> Result<i32, String> {
                 screen.show_lines(
                     &format!(
                         "pipi TRACE {}  | cycle {}",
-                        cli::visible_host(&options.target), cycle
+                        cli::visible_host(&options.target),
+                        cycle
                     ),
                     &rows,
                     "MTR live | RTT in ms | X=timeout | Ctrl-C exit",
@@ -481,8 +512,11 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     if full_screen {
         crate::engine::emit(&format!(
             "pipi trace {} | {} cycles | {} hops seen",
-            target.ip(), cycle,
-            hops.iter().rposition(|hop| hop.stats.sent > 0).map_or(0, |i| i + 1)
+            target.ip(),
+            cycle,
+            hops.iter()
+                .rposition(|hop| hop.stats.sent > 0)
+                .map_or(0, |i| i + 1)
         ));
     }
     Ok(if reached { 0 } else { 1 })
