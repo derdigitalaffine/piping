@@ -44,6 +44,7 @@ lines = [json.loads(line) for line in sys.stdin if line.strip()]
 assert sum(e.get("event") == "reply" for e in lines) == 2, lines
 assert sum(e.get("event") == "summary" for e in lines) == 1, lines
 assert all(e.get("schema") == 1 for e in lines), lines
+assert all(isinstance(e.get("timestamp_unix_ms"), int) and e["timestamp_unix_ms"] > 1700000000000 for e in lines), lines
 assert all(e.get("received") == 2 for e in lines if e["event"] == "summary"), lines
 ' <<< "$json_output"; then
     pass "JSONL schema, 2 replies and final summary"
@@ -60,6 +61,7 @@ rows = list(csv.DictReader(sys.stdin))
 assert len(rows) == 3, rows
 assert [r["event"] for r in rows] == ["reply", "reply", "summary"], rows
 assert rows[-1]["received"] == "2", rows
+assert all(int(r["timestamp_unix_ms"]) > 1700000000000 for r in rows), rows
 ' <<< "$csv_output"; then
     pass "CSV schema, two replies and summary"
   else
