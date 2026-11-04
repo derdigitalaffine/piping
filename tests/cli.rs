@@ -1,7 +1,7 @@
 use std::process::Command;
 
 fn pipi(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_piping"))
+    Command::new(env!("CARGO_BIN_EXE_pipi"))
         .args(args)
         .output()
         .expect("run CLI")
