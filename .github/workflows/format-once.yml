@@ -1,0 +1,33 @@
+name: Temporary one-time rustfmt for pipi v0.2
+on:
+  push:
+    branches: ["feat/mtr-trace-tui-neighborhood"]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  fmt-once:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mtr-trace-tui-neighborhood
+          persist-credentials: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format all Rust source once
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests
+          if ! git diff --cached --quiet; then
+            git commit -m "style: cargo fmt --all (pipi 0.2)"
+            git push origin HEAD:feat/mtr-trace-tui-neighborhood
+          else
+            echo "rustfmt already clean"
+          fi
