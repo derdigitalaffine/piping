@@ -25,6 +25,9 @@ output=$(sudo -n "$binary" discover --active 198.18.0.0/30 \
   --interface "$iface" --pps 5 --max-hosts 2 --timeout 2 --output jsonl 2>&1)
 status=$?
 if [ "$status" -ne 0 ]; then
+  if grep -qi 'CAP_NET_RAW required' <<< "$output"; then
+    echo "SKIP: isolated runner lacks CAP_NET_RAW"; exit 77
+  fi
   echo "FAIL: active ARP exit=$status"; echo "$output"; exit 1
 fi
 if ! python3 -c '
