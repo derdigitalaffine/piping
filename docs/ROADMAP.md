@@ -42,7 +42,7 @@ Stand: **04.11.2026**. Rust-Code und Linux-CI sind via [PR #18](https://github.c
 - [ ] [#21](https://github.com/derdigitalaffine/piping/issues/21): Passive ARP/NDP-Nachbarerkennung mit Linux RTM_GETNEIGH, Ausgabe-/Parser-/Limit-Tests.
 - [ ] [#22](https://github.com/derdigitalaffine/piping/issues/22): Explizite aktive ARP-Erkennung ausschließlich on-link, CAP_NET_RAW, isolierter veth-Test ohne öffentliche Ziele.
 
-**Status:** Implementiert auf dem Feature-Branch, aber **nicht abgenommen**. Die neuen GitHub-Actions-Jobs starteten ohne Schritte (siehe QA-Bericht); ältere 100-PPS-Benchmarks gelten nur für den bisherigen `main`-Stand. Keine neuen Produktions- oder Geschwindigkeitszusagen.
+**Status:** Code aus #20–#22 wurde auf Wunsch via PR #23 nach main gemergt, aber noch nicht CI-abgenommen. Die neuen GitHub-Actions-Jobs starteten ohne Schritte (siehe QA-Bericht); ältere 100-PPS-Benchmarks gelten nur für den bisherigen `main`-Stand. Keine neuen Produktions- oder Geschwindigkeitszusagen.
 
 ## Release-0.1.0-Abnahme
 
@@ -64,3 +64,12 @@ Fehlen Terminalfähigkeiten: Classic-/ASCII-Ausgabe bleibt. Fehlen Socketrechte:
 ## Arbeitsmodus
 
 Jede Änderung bekommt ein Issue, einen kurzen Branch/PR, reproduzierbare Tests und einen ehrlichen Prüfstatus. Die Source of Truth ist `AGENTS.md` + `docs/` + das zentrale Tracking-Issue; GitHub-Issues bleiben offen bis DoD nachgewiesen ist. Keine erfundenen CI-Erfolge und keine vorweggenommenen Releases.
+
+## M7 – pipi v0.2 (Trace, Fullscreen und Neighborhood)
+
+- [ ] [#25](https://github.com/derdigitalaffine/piping/issues/25): MTR-artiger Hop-Trace (TTL/ICMP Error Queue), Linux-Tests und per-Hop-Smoke.
+- [ ] [#26](https://github.com/derdigitalaffine/piping/issues/26): auf 40x12/80x24 dynamisch begrenzte TUI mit RTT-KPIs.
+- [ ] [#27](https://github.com/derdigitalaffine/piping/issues/27): automatisch read-only ARP/NDP-Nachbarschaft, ASCII-/Unicode-Baum und explizites privates `--scan-local`.
+- [ ] [#24](https://github.com/derdigitalaffine/piping/issues/24): CI-Runner-Blocker; erst mit ausgeführten Schritten sind die neuen Tests/Benchmarks belegt.
+
+**Breaking Change:** Cargo-Paket und ausführbarer Name `pipi` statt `piping`. Repository-URL bleibt gleich. Status ist **Implementierung/QA ausstehend**, nicht veröffentlichte Produktionsfreigabe.

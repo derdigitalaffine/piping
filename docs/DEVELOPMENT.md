@@ -70,3 +70,16 @@ bash tests/compare_fastpath.sh ./target/release/pipi-v0.1 ./target/release/pipi
 ```
 
 Der Performance-Test sendet ausschließlich IPv4-ICMP an `127.0.0.1`, nicht ins öffentliche Netz. Er protokolliert CPU/RSS, er beweist ohne reproduzierbaren Baseline-Vergleich **keinen** Geschwindigkeitsvorsprung. Netlink-Passivmodus braucht keine Raw-Paketsocket-Rechte.
+
+## pipi v0.2: TUI und MTR/Neighborhood
+
+```sh
+cargo install --path . --locked --features tui
+pipi tui 127.0.0.1
+pipi trace -c 2 --smoke --max-hops 1 127.0.0.1
+pipi trace --tui --max-hops 12 192.0.2.1
+pipi neighborhood --tui
+bash tests/trace_neighborhood_smoke.sh ./target/release/pipi
+```
+
+Der GitHub-Repositoryname `piping` bleibt bestehen; Cargo-Paket und Binärdatei heißen jetzt `pipi` (0.2.0). Trace basiert auf Linux IP_RECVERR und benötigt funktionierende ICMP-Ping-Sockets. Bis eine CI tatsächlich Schritte ausführt, ist die neue Version **nicht als erfolgreich kompiliert/testet** einzustufen.

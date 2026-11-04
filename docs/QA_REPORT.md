@@ -80,3 +80,11 @@ Neue Issues [#20](https://github.com/derdigitalaffine/piping/issues/20), [#21](h
 - [ ] Passive ARP/NDP-Netlink-CLI mit leerem Cache und synthetischen fehlerhaften Netlink-Paketen.
 - [ ] Aktive ARP mit isolierten veth-Peers, CAP_NET_RAW, Interface-/Route-Check und gefälschten ARP-Antworten; fehlende CAP_NET_ADMIN im CI explizit SKIP.
 - [ ] Prüfung der zusätzlichen unsafe FFI-Wrapper, Speicher-/Rate-/Timeout-Obergrenzen.
+
+## M7 v0.2 pipi (04.11.2026, neuer Trace/Neighborhood-Branch)
+
+Neue GitHub-Issues #25–#27: `pipi trace` nutzt Linux `IP_RECVERR` / `MSG_ERRQUEUE`, pro-Hop-Verlust/RTT und 60-Bucket-Smoke-Sparklines; `pipi neighborhood` zeigt passiv Interfaces und Kernel-ARP/NDP-Einträge, alternativ eine explizite einmalige private `--scan-local`-ARP-Erkennung; die optionale TUI rendert nach Terminalgröße.
+
+**Keine positive CI-Behauptung für M7:** Der zuvor bestätigte Run #41807144867 gilt für den historischen Binarynamen `piping` und den v0.1-Code. Die neuen Module, die Umbenennung auf `pipi` und der 0.2.0-Build wurden noch **nicht** mit einer ausführenden Linux-CI abgenommen. GitHub Actions startet weiterhin Jobs mit 0 Schritten (Blocker #24), daher ist weder ein Leak-/FFI-Security-Audit noch ein Linux-Live-Test/Benchmark abgeschlossen.
+
+Offene Gates: `cargo fmt --check`, Rust 1.85, Clippy alle Features, `cargo test`, Source-Installation mit/ohne TUI, Linux-Loopback-Trace v4/v6, künstliche Time-Exceeded/Unreachable-Pakete, volle/kleine Terminalgrößen, aktive ARP nur isoliert unter explizit erlaubter Admin-Testumgebung. Siehe [M7-Handbuch](TRACE_NEIGHBORHOOD.md).

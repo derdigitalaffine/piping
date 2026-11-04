@@ -1,6 +1,14 @@
 # Changelog
 
-## [Unreleased] – v0.1.0 candidate (2026-11-04)
+## [Unreleased] – pipi v0.2.0 development candidate (2026-11-04)
+
+- **Breaking CLI rename:** Cargo crate/binary `pipi` instead of `piping`; same GitHub repository `derdigitalaffine/piping`.
+- `pipi trace HOST`: MTR-like ICMPv4/v6 hop statistics from Linux MSG_ERRQUEUE with per-hop bounded SmokePing-style loss/RTT sparklines and optional compact TUI.
+- `pipi neighborhood`: per-interface graphical ARP/NDP neighbor graph, read-only 5s auto-refresh and optional `--scan-local` explicit private on-link ARP probing.
+- Redesigned viewport-limited fullscreen TUI for classic ping, trace and neighborhood; min/avg/max/p95/jitter in ping display.
+- **Pending**: Rust build, clippy/fmt, live Linux validation and unsafe audit; Actions jobs have failed before startup (issue #24).
+
+## [Previous development candidate] – piping v0.1.0 (2026-11-04)
 
 - Dependency-free Rust 2024 Linux binary with conventional one-host ICMP ping.
 - Linux datagram ICMPv4 / ICMPv6 Echo transport, probe source/sequence/nonce correlation, timeout and duplicate accounting.

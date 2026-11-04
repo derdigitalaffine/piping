@@ -69,3 +69,9 @@ Single target first; danach bounded multi-target send/receive. Große Bereiche a
 Die ICMP-Messengine verwendet einen vorinitialisierten Payload-Buffer, ersetzt nur 24 Bytes pro Probe, leert Receive-Queues direkt in einen Callback ohne per-Wakeup-Vec, und schläft per Linux poll ohne fixen 200-ms-Wecker. Für Range läuft eine begrenzte `VecDeque`-Bereitliste: ein Host wird erst nach Abschluss eines Echo/Timeout wieder freigeschaltet, O(1) pro Auswahl. Range-Stats werden ohne RTT-Percentile-Historie pro Host geführt.
 
 Layer-2 ist vom ICMP-Engine-Modul getrennt: `src/discovery.rs` validiert CLI und Ausgabe, `src/neighbor.rs` liest read-only RTM_GETNEIGH / NLM_F_DUMP mit defensivem, endian-korrektem Parser, `src/arp.rs` sendet nur bei `--active` minimal gültige ARP-Ethernet-Frames. Keine zusätzlichen Cargo-Abhängigkeiten; der Standard-Ping öffnet keine Raw-Ethernet-Sockets. Ein gescheitertes/ausstehendes CI-Run ist kein Nachweis von Funktion oder Performance.
+
+## M7 Trace und Neighborhood
+
+`src/trace_socket.rs` kapselt Linux `IP_RECVERR`/`IPV6_RECVERR`, `recvmsg(MSG_ERRQUEUE)` sowie TTL-/Hop-Limit-Setsockopt auf einem exklusiven Ping-Socket; `src/trace.rs` führt den gebremsten Ein-Probe-Scheduler, korreliert Nonce/Sequenz/Ziel und verwendet `src/graph.rs::sparkline` pro Hop. Der Hop-Zustand hält maximal 60 Proben (Option RTT/Loss) und Welford-Statistik statt unbounded global state.
+
+`src/neighborhood.rs` gruppiert Kernel-Cachenachbarn aus `src/neighbor.rs` und erlaubt als ausdrücklichen ARP-Sendewunsch das sichere automatisch ermittelte RFC1918-Onlink-CIDR via `src/arp.rs`; keine impliziten Scans oder periodische aktive Sendungen. `src/tui.rs` fragt `TIOCGWINSZ` ab, begrenzt jeden Frame auf die Terminalgröße und stellt den Alternate Screen bei Drop wieder her. Der Cargo-Name ist seit 0.2 `pipi`; GitHub-Repo bleibt `piping`.

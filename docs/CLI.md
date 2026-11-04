@@ -13,6 +13,10 @@ Linux-only ICMP Echo diagnostics in Rust. The default mode behaves like a conven
 | `pipi range 2001:db8::/126 --max-hosts 16` | bounded IPv6 CIDR sweep |
 | `pipi monitor localhost --window 60 --ascii` | streaming text RTT distribution |
 | `pipi tui localhost` | opt-in fullscreen terminal (requires `--features tui`) |
+| `pipi trace --smoke --max-hops 16 HOST` | MTR-artiger Hop-Trace mit RTT/Loss und Smoke je Hop |
+| `pipi trace --tui HOST` | kompakte Fullscreen-Hop-Tabelle (optional `tui`) |
+| `pipi neighborhood --tui` | passive Live-L2-Nachbarschaftskarte |
+| `pipi neighborhood --scan-local -i eth0` | einmalige, explizite private ARP-Erkennung |
 | `pipi discover` | passive ARP/NDP kernel neighbor discovery (no scan) |
 | `pipi discover --active 192.168.1.0/24 -i eth0` | explicit on-link active IPv4 ARP sweep (CAP_NET_RAW) |
 
@@ -61,3 +65,7 @@ A bucket groups probes sent in a one-second window. The graph shows median as `*
 ## Layer-2 discovery (next source candidate)
 
 The `discover` command is independent from ICMP ping and is *read-only by default*. For Netlink ARP/NDP output, optional explicit on-link ARP probes, privileges, PPS/host caps, JSONL/CSV schemas and safety boundaries see [`docs/DISCOVERY.md`](DISCOVERY.md). The classic `pipi HOST` path is unaffected.
+
+## Trace / Neighborhood (v0.2 source candidate)
+
+See [Trace + Neighborhood guide](TRACE_NEIGHBORHOOD.md) for `--max-hops`, `--smoke`, `--tui`, read-only neighbor cache, on-link active private `--scan-local` and safe Linux rights. The command is `pipi`; the GitHub repository remains `derdigitalaffine/piping`.

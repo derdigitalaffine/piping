@@ -2,19 +2,22 @@
 
 **pipi** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat auf **`main`** – [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19) gemergt.** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben. Die neuesten GitHub-Actions-Jobs starteten nach dem Merge ohne Schritte/Logs und gelten **nicht** als bestandene Prüfung.
+> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary \`piping\` wird **\`pipi\` 0.2.0**. GitHub-Repository und Clone-URL bleiben \`derdigitalaffine/piping\`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die aktuelle GitHub-Actions-Infrastruktur startet keine Jobs; Rust-/Linux-Tests und Produktivreife der neuen Version sind noch nicht nachgewiesen.** Der ältere grüne [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) gilt nur für den vorherigen \`piping\`-Stand.
 
-## Nächste Entwicklungsstufe: schneller ICMP-Hot-Path und Layer-2 Discovery
+## Neu: Trace / Neighborhood / TUI
 
-Auf dem Branch [`feat/fastpath-l2-discovery`](https://github.com/derdigitalaffine/piping/tree/feat/fastpath-l2-discovery) werden pro Ping wiederverwendbare Paketpuffer, eine O(1)-Range-Queue, weniger Poll-Wakeups und speichersparende Sweep-Statistiken umgesetzt. `pipi discover` kann bekannte ARP-/IPv6-NDP-Nachbarn passiv aus Netlink lesen; aktive ARP-Erkennung auf direkt angeschlossenen Netzen ist ausdrücklich opt-in. Details: [Layer-2-Handbuch](docs/DISCOVERY.md). **Neue Benchmarks/Builds sind wegen nicht gestarteter GitHub-Actions-Jobs noch nicht bestätigt.**
-
-```sh
-pipi discover --interface eth0
+\`\`\`sh
+pipi trace -c 3 --smoke --max-hops 16 127.0.0.1
+pipi trace --tui --smoke 1.1.1.1
+pipi neighborhood                       # passive lokale Netzwerkumgebung
+pipi neighborhood --tui                 # automatisch aktualisierte grafische Ansicht
+pipi neighborhood --scan-local -i eth0  # explizit aktive private ARP-Erkennung
 pipi discover --family 6 --output jsonl
-pipi discover --active 192.168.1.0/24 -i eth0 --pps 20
-```
+\`\`\`
 
-## CLI-Befehle auf `main`
+**Installation mit TUI:** \`cargo install --path . --locked --features tui\`. Details zu Grenzen und Privilegien: [Trace + Neighborhood](docs/TRACE_NEIGHBORHOOD.md) und [Discovery](docs/DISCOVERY.md).
+
+## Basisbefehle
 
 ```sh
 pipi example.com
