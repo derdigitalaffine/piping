@@ -24,7 +24,10 @@ pub struct Screen;
 pub fn dimensions() -> (usize, usize) {
     let mut ws = WinSize::default();
     // SAFETY: Linux TIOCGWINSZ reads a 4 x u16 initialized writable struct.
-    if unsafe { ioctl(1, TIOCGWINSZ, (&mut ws as *mut WinSize).cast()) } == 0 && ws.col > 0 && ws.row > 0 {
+    if unsafe { ioctl(1, TIOCGWINSZ, (&mut ws as *mut WinSize).cast()) } == 0
+        && ws.col > 0
+        && ws.row > 0
+    {
         (usize::from(ws.col), usize::from(ws.row))
     } else {
         (80, 24)

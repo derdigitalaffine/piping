@@ -361,7 +361,16 @@ pub fn scan(
         if sent < targets.len() && now >= next_send {
             let frame = request(own_mac, own_ip, targets[sent]);
             // SAFETY: frame and destination sockaddr_ll are initialized and live.
-            let wrote = unsafe { sendto(sock.0, frame.as_ptr().cast(), frame.len(), 0, (&dest as *const SockAddrLl).cast(), 20) };
+            let wrote = unsafe {
+                sendto(
+                    sock.0,
+                    frame.as_ptr().cast(),
+                    frame.len(),
+                    0,
+                    (&dest as *const SockAddrLl).cast(),
+                    20,
+                )
+            };
             if wrote < 0 {
                 return Err(arp_error("send ARP request", io::Error::last_os_error()));
             }

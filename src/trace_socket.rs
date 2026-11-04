@@ -207,7 +207,16 @@ impl TraceSocket {
             (SOL_IP, IP_TTL)
         };
         // SAFETY: packet TTL/hop limit only affects this private ping socket.
-        if unsafe { setsockopt(self.socket.fd(), level, option, (&value as *const c_int).cast(), 4) } < 0 {
+        if unsafe {
+            setsockopt(
+                self.socket.fd(),
+                level,
+                option,
+                (&value as *const c_int).cast(),
+                4,
+            )
+        } < 0
+        {
             return Err(io::Error::last_os_error());
         }
         self.socket.send(dest, packet)

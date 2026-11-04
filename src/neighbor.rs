@@ -255,7 +255,16 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
         groups: 0,
     };
     // SAFETY: req and kernel are live, correctly sized buffers.
-    let sent = unsafe { sendto(sock.0, req.as_ptr().cast(), req.len(), 0, (&kernel as *const SockAddrNl).cast(), 12) };
+    let sent = unsafe {
+        sendto(
+            sock.0,
+            req.as_ptr().cast(),
+            req.len(),
+            0,
+            (&kernel as *const SockAddrNl).cast(),
+            12,
+        )
+    };
     if sent != req.len() as isize {
         return Err(format!(
             "RTM_GETNEIGH request failed: {}",
