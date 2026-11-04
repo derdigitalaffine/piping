@@ -261,7 +261,7 @@ pub fn scan(
         let now = Instant::now();
         let deadline = finish_at.unwrap_or(next_send);
         let wait = deadline.saturating_duration_since(now);
-        let ms = wait.as_millis().min(1000) as c_int;
+        let ms = wait.as_micros().div_ceil(1000).min(1000) as c_int;
         let mut pfd = PollFd { fd: sock.0, events: POLLIN, revents: 0 };
         // SAFETY: initialized pollfd, no pointers retained.
         let status = unsafe { poll(&mut pfd, 1, ms) };
