@@ -1,20 +1,20 @@
-# piping CLI reference (0.1.0 candidate)
+# pipi CLI reference (0.1.0 candidate)
 
 Linux-only ICMP Echo diagnostics in Rust. The default mode behaves like a conventional one-host ping; no TUI or external Rust dependencies are required.
 
 | Command | Meaning |
 | --- | --- |
-| `piping HOST` | classic continuous Echo until Ctrl-C |
-| `piping -4 -c 4 -W 2 HOST` | four IPv4 probes with two-second timeout |
-| `piping -6 ::1` | force IPv6 |
-| `piping fast 127.0.0.1 --pps 20 --count 100` | bounded high-frequency Echo |
-| `piping range 192.168.1.0/24 --only-alive` | IPv4 CIDR ICMP sweep |
-| `piping range 192.168.1.10-192.168.1.20 --jobs 16` | inclusive IPv4 range sweep |
-| `piping range 2001:db8::/126 --max-hosts 16` | bounded IPv6 CIDR sweep |
-| `piping monitor localhost --window 60 --ascii` | streaming text RTT distribution |
-| `piping tui localhost` | opt-in fullscreen terminal (requires `--features tui`) |
-| `piping discover` | passive ARP/NDP kernel neighbor discovery (no scan) |
-| `piping discover --active 192.168.1.0/24 -i eth0` | explicit on-link active IPv4 ARP sweep (CAP_NET_RAW) |
+| `pipi HOST` | classic continuous Echo until Ctrl-C |
+| `pipi -4 -c 4 -W 2 HOST` | four IPv4 probes with two-second timeout |
+| `pipi -6 ::1` | force IPv6 |
+| `pipi fast 127.0.0.1 --pps 20 --count 100` | bounded high-frequency Echo |
+| `pipi range 192.168.1.0/24 --only-alive` | IPv4 CIDR ICMP sweep |
+| `pipi range 192.168.1.10-192.168.1.20 --jobs 16` | inclusive IPv4 range sweep |
+| `pipi range 2001:db8::/126 --max-hosts 16` | bounded IPv6 CIDR sweep |
+| `pipi monitor localhost --window 60 --ascii` | streaming text RTT distribution |
+| `pipi tui localhost` | opt-in fullscreen terminal (requires `--features tui`) |
+| `pipi discover` | passive ARP/NDP kernel neighbor discovery (no scan) |
+| `pipi discover --active 192.168.1.0/24 -i eth0` | explicit on-link active IPv4 ARP sweep (CAP_NET_RAW) |
 
 ## Options
 
@@ -60,4 +60,4 @@ A bucket groups probes sent in a one-second window. The graph shows median as `*
 
 ## Layer-2 discovery (next source candidate)
 
-The `discover` command is independent from ICMP ping and is *read-only by default*. For Netlink ARP/NDP output, optional explicit on-link ARP probes, privileges, PPS/host caps, JSONL/CSV schemas and safety boundaries see [`docs/DISCOVERY.md`](DISCOVERY.md). The classic `piping HOST` path is unaffected.
+The `discover` command is independent from ICMP ping and is *read-only by default*. For Netlink ARP/NDP output, optional explicit on-link ARP probes, privileges, PPS/host caps, JSONL/CSV schemas and safety boundaries see [`docs/DISCOVERY.md`](DISCOVERY.md). The classic `pipi HOST` path is unaffected.

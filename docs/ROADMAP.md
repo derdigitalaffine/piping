@@ -46,7 +46,7 @@ Stand: **04.11.2026**. Rust-Code und Linux-CI sind via [PR #18](https://github.c
 
 ## Release-0.1.0-Abnahme
 
-- [ ] Standard-CLI `piping HOST` mit Classic-Ausgabe und korrekten 0/1/2-Exitcodes
+- [ ] Standard-CLI `pipi HOST` mit Classic-Ausgabe und korrekten 0/1/2-Exitcodes
 - [ ] Linux ICMPv4 & ICMPv6 Echo/Timeout/invalid Reply korrekt
 - [ ] Keine Rechte-Eskalation; verständliche Rootless-/EPERM-Hinweise
 - [ ] Fast Ping mit getesteten Limits, Fairness und sauberem Abbruch

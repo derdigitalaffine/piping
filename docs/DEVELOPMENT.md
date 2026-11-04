@@ -14,9 +14,9 @@ cargo clippy --all-targets --all-features -- -D warnings
 cargo test --locked
 cargo build --release --locked
 cargo build --release --locked --no-default-features
-./target/release/piping --help
-./target/release/piping -c 3 127.0.0.1
-./target/release/piping -6 -c 3 ::1
+./target/release/pipi --help
+./target/release/pipi -c 3 127.0.0.1
+./target/release/pipi -6 -c 3 ::1
 ```
 
 Die letzten zwei Kommandos benötigen passende Linux-Ping-Sockets. CI prüft außerdem `cargo install --locked --path .` in einem isolierten `CARGO_TARGET_DIR` und führt das installierte Binary auf Loopback aus. Kein Test darf ohne tatsächlichen Lauf als bestanden erfasst werden; wenn ICMP gesperrt ist, kennzeichnen `SKIP: EPERM/ping_group_range` statt Fake-Grün.
@@ -62,11 +62,11 @@ cargo test --locked --all-features
 cargo build --release --locked --all-features
 bash -n tests/discovery_smoke.sh
 bash -n tests/discovery_active_veth.sh
-bash tests/discovery_smoke.sh ./target/release/piping
+bash tests/discovery_smoke.sh ./target/release/pipi
 # optional, separates Linux CAP_NET_ADMIN from CAP_NET_RAW and uses only a disposable veth pair
-bash tests/discovery_active_veth.sh ./target/release/piping
-bash tests/benchmark_fastpath.sh ./target/release/piping
-bash tests/compare_fastpath.sh ./target/release/piping-v0.1 ./target/release/piping
+bash tests/discovery_active_veth.sh ./target/release/pipi
+bash tests/benchmark_fastpath.sh ./target/release/pipi
+bash tests/compare_fastpath.sh ./target/release/pipi-v0.1 ./target/release/pipi
 ```
 
 Der Performance-Test sendet ausschließlich IPv4-ICMP an `127.0.0.1`, nicht ins öffentliche Netz. Er protokolliert CPU/RSS, er beweist ohne reproduzierbaren Baseline-Vergleich **keinen** Geschwindigkeitsvorsprung. Netlink-Passivmodus braucht keine Raw-Paketsocket-Rechte.

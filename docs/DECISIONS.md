@@ -2,11 +2,11 @@
 
 ## D-001: Projektsprache und Scope
 
-**Entscheidung:** Rust 2024, Linux-first, ein einzelnes ausführbares `piping`, kein verpflichtender Service und keine Weboberfläche. Stable Rust/MSRV werden im Foundation-Issue festgelegt.
+**Entscheidung:** Rust 2024, Linux-first, ein einzelnes ausführbares `pipi`, kein verpflichtender Service und keine Weboberfläche. Stable Rust/MSRV werden im Foundation-Issue festgelegt.
 
 ## D-002: Standard-CLI bleibt einfach
 
-**Entscheidung:** `piping HOST` liefert Classic-Ping, mit `-c`/`-i`/`-W` und `-4/-6`. TUI ausschließlich explizit. Keine vollständige iputils-Drop-in-Kompatibilität behaupten.
+**Entscheidung:** `pipi HOST` liefert Classic-Ping, mit `-c`/`-i`/`-W` und `-4/-6`. TUI ausschließlich explizit. Keine vollständige iputils-Drop-in-Kompatibilität behaupten.
 
 ## D-003: „Range Pong“
 
