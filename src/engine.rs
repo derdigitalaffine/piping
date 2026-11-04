@@ -670,7 +670,7 @@ mod tests {
         );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(ip, 42, 999, 42),
             123,
@@ -679,7 +679,7 @@ mod tests {
             &mut history,
             &mut recent,
         );
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(ip, 41, 123, 42),
             123,
@@ -688,7 +688,7 @@ mod tests {
             &mut history,
             &mut recent,
         );
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), 42, 123, 42),
             123,
@@ -723,7 +723,7 @@ mod tests {
         );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(ip, 42, 123, 42),
             123,
@@ -734,7 +734,7 @@ mod tests {
         );
         assert_eq!(targets[0].stats.received, 1);
         assert!(pending.is_empty());
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(ip, 42, 123, 42),
             123,
@@ -767,7 +767,7 @@ mod tests {
         );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(
+        let _ = on_reply(
             &config,
             fake_incoming(ip, 7, 123, 7),
             123,
