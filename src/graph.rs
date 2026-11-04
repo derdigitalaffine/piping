@@ -33,11 +33,15 @@ impl Bucket {
         percentile(self.replies.clone(), 0.9)
     }
 
+    pub fn pending(&self) -> usize {
+        (self.sent as usize).saturating_sub(self.replies.len() + self.timeouts as usize)
+    }
+
     pub fn loss(&self) -> f64 {
         if self.sent == 0 {
             0.0
         } else {
-            100.0 * (self.sent as usize).saturating_sub(self.replies.len()) as f64 / self.sent as f64
+            100.0 * self.timeouts as f64 / self.sent as f64
         }
     }
 }
@@ -125,8 +129,8 @@ fn format_bucket(b: &Bucket, max_ms: f64, ascii: bool) -> String {
     if b.replies.is_empty() {
         cells[0] = if b.sent > 0 { 'X' } else { '.' };
         return format!(
-            "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  no RTT",
-            b.second, cells.iter().collect::<String>(), b.replies.len(), b.sent, b.loss()
+            "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  pending {}  no RTT",
+            b.second, cells.iter().collect::<String>(), b.replies.len(), b.sent, b.loss(), b.pending()
         );
     }
     let lo = scale(b.p10(), max_ms);
@@ -137,12 +141,13 @@ fn format_bucket(b: &Bucket, max_ms: f64, ascii: bool) -> String {
     let median = scale(b.median(), max_ms);
     cells[median] = if ascii { '*' } else { '●' };
     format!(
-        "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  p50 {:>7.3}  p95 {:>7.3} ms",
+        "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  pending {}  p50 {:>7.3}  p95 {:>7.3} ms",
         b.second,
         cells.iter().collect::<String>(),
         b.replies.len(),
         b.sent,
         b.loss(),
+        b.pending(),
         b.median(),
         b.p95()
     )
@@ -158,6 +163,8 @@ mod tests {
         h.on_send(0);
         h.on_send(0);
         h.on_reply(0, 10.0);
+        assert!(h.line(0, true).contains("pending 1"));
+        h.on_timeout(0);
         assert!(h.line(0, true).contains("loss  50.0%"));
         assert!(h.line(0, true).contains('*'));
         h.on_send(1);

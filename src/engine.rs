@@ -8,7 +8,7 @@ use crate::range;
 use crate::stats::Stats;
 use std::collections::{HashMap, VecDeque};
 use std::io::{self, IsTerminal, Read, Write};
-use std::net::{IpAddr, SocketAddr};
+use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
 
@@ -190,7 +190,7 @@ fn send_one(
 }
 
 fn event_reply(config: &Config, target: &Target, seq: u16, ms: f64, bytes: usize) {
-    if config.quiet || matches!(config.mode, Mode::Range | Mode::Monitor | Mode::Tui) {
+    if config.quiet || (config.output == Output::Text && matches!(config.mode, Mode::Range | Mode::Monitor | Mode::Tui)) {
         return;
     }
     match config.output {
@@ -281,7 +281,7 @@ fn note_recent(recent: &mut VecDeque<(u64, usize, bool)>, id: u64, idx: usize, r
 fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 {
     let sent: u64 = targets.iter().map(|t| t.stats.sent).sum();
     let received: u64 = targets.iter().map(|t| t.stats.received).sum();
-    let loss = if sent == 0 { 100.0 } else { 100.0 * (sent - received) as f64 / sent as f64 };
+    let loss = if sent == 0 { 100.0 } else { 100.0 * sent.saturating_sub(received) as f64 / sent as f64 };
     let alive = targets.iter().filter(|t| t.stats.received > 0).count();
     let all_alive = alive == targets.len();
     match config.output {
@@ -442,6 +442,8 @@ pub fn run(config: Config) -> Result<i32, String> {
         }
         let elapsed = now.duration_since(start);
         if matches!(config.mode, Mode::Monitor | Mode::Tui) {
+            #[cfg(feature = "tui")]
+            let redraw = second_to_render < elapsed.as_secs();
             while second_to_render < elapsed.as_secs() {
                 if config.mode == Mode::Monitor && config.output == Output::Text && !config.quiet {
                     emit(&history.line(second_to_render, ascii));
@@ -449,7 +451,7 @@ pub fn run(config: Config) -> Result<i32, String> {
                 second_to_render += 1;
             }
             #[cfg(feature = "tui")]
-            if let Some(screen) = screen.as_ref() {
+            if redraw && let Some(screen) = screen.as_ref() {
                 screen.show(
                     &cli::visible_host(&config.target),
                     &history.recent(22, config.ascii),
@@ -462,14 +464,12 @@ pub fn run(config: Config) -> Result<i32, String> {
         if finished && pending.is_empty() {
             break;
         }
-        let candidate = if pending.len() < config.jobs {
+        let candidate = if now >= next_send && pending.len() < config.jobs {
             select_target(&targets, &pending, &mut cursor, config.count, config.mode == Mode::Range)
         } else {
             None
         };
-        if let Some(idx) = candidate
-            && now >= next_send
-        {
+        if let Some(idx) = candidate {
             send_one(
                 &config, &sockets, &mut targets, &mut pending, &mut history,
                 start, nonce, token, idx,
@@ -505,7 +505,7 @@ pub fn run(config: Config) -> Result<i32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::net::Ipv4Addr;
+    use std::net::{IpAddr, Ipv4Addr};
 
     #[test]
     fn scheduler_honors_count_and_one_inflight_per_range_host() {
