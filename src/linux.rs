@@ -209,7 +209,9 @@ impl PingSocket {
         };
         if length < 0 {
             let e = io::Error::last_os_error();
-            return if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) {
+            return if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted)
+                || matches!(e.raw_os_error(), Some(101 | 111 | 113))
+            {
                 Ok(None)
             } else {
                 Err(e)
@@ -277,7 +279,8 @@ pub fn echo_request(ipv6: bool, seq: u16, nonce: u64, token: u64, size: usize) -
 
 /// Validate structural echo fields and recover the 128-bit correlation marker.
 pub fn parse_reply(packet: &[u8], ipv6: bool) -> Option<Echo> {
-    if packet.len() < 24 || packet[0] != if ipv6 { 129 } else { 0 } || packet[1] != 0 {
+    let expected_type = if ipv6 { 129 } else { 0 };
+    if packet.len() < 24 || packet[0] != expected_type || packet[1] != 0 {
         return None;
     }
     let seq = u16::from_be_bytes([packet[6], packet[7]]);

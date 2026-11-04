@@ -127,7 +127,7 @@ fn scale(ms: f64, axis: f64) -> usize {
 fn format_bucket(b: &Bucket, max_ms: f64, ascii: bool) -> String {
     let mut cells = [' '; 28];
     if b.replies.is_empty() {
-        cells[0] = if b.sent > 0 { 'X' } else { '.' };
+        cells[0] = if b.timeouts > 0 { 'X' } else if b.pending() > 0 { '?' } else { '.' };
         return format!(
             "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  pending {}  no RTT",
             b.second, cells.iter().collect::<String>(), b.replies.len(), b.sent, b.loss(), b.pending()

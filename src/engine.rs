@@ -451,13 +451,15 @@ pub fn run(config: Config) -> Result<i32, String> {
                 second_to_render += 1;
             }
             #[cfg(feature = "tui")]
-            if redraw && let Some(screen) = screen.as_ref() {
-                screen.show(
+            if redraw {
+                if let Some(screen) = screen.as_ref() {
+                    screen.show(
                     &cli::visible_host(&config.target),
                     &history.recent(22, config.ascii),
                     targets[0].stats.sent,
                     targets[0].stats.received,
-                );
+                    );
+                }
             }
         }
         let finished = config.count.is_some_and(|limit| targets.iter().all(|t| t.sent >= limit));
