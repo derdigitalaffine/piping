@@ -262,7 +262,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
             );
         }
         if !options.tui {
-            crate::engine::emit(&format!("pipi neighborhood | snapshot {cycle} | local, passive={}", options.active.is_none()));
+            crate::engine::emit(&format!("pipi neighborhood | snapshot {cycle} | observed={total} | passive={}", options.active.is_none()));
             for row in &rows { crate::engine::emit(row); }
         }
         if max.is_some_and(|count| cycle >= count) { break; }

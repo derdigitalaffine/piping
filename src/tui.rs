@@ -104,7 +104,7 @@ impl Screen {
         let loss = if sent == 0 { 0.0 } else {
             100.0 * sent.saturating_sub(received) as f64 / sent as f64
         };
-        let (width, height) = size();
+        let (width, height) = dimensions();
         let graph_lines: Vec<_> = graph.lines().map(str::to_owned).collect();
         let visible = height.saturating_sub(5);
         let mut rows = vec![format!(

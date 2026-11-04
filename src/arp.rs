@@ -344,13 +344,13 @@ pub fn scan(
             if src_len < 12 || source.ifindex != ifindex || source.pkttype == 4 {
                 continue; // Ignore packets from other interfaces or locally outgoing frames.
             }
-            if let Some((ip, mac)) = parse_reply(&buffer[..len as usize], &own_mac, own_ip)
-                && wanted.contains(&ip) && seen.insert(ip)
-            {
-                found.push(Neighbor {
-                    ifindex, ip: IpAddr::V4(ip), mac: mac.to_vec(),
-                    state: 2, active: true,
-                });
+            if let Some((ip, mac)) = parse_reply(&buffer[..len as usize], &own_mac, own_ip) {
+                if wanted.contains(&ip) && seen.insert(ip) {
+                    found.push(Neighbor {
+                        ifindex, ip: IpAddr::V4(ip), mac: mac.to_vec(),
+                        state: 2, active: true,
+                    });
+                }
             }
         }
     }

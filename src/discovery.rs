@@ -6,7 +6,6 @@ use crate::neighbor::{self, Neighbor};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::{self, Write};
-use std::net::IpAddr;
 use std::time::Duration;
 
 #[derive(Clone, Debug)]

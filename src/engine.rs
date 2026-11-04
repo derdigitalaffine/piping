@@ -573,11 +573,12 @@ pub fn run(config: Config) -> Result<i32, String> {
                     &mut history,
                     &mut recent,
                 );
-                if let Some(idx) = completed
-                    && config.mode == Mode::Range
-                    && config.count.is_some_and(|limit| targets[idx].sent < limit)
-                {
-                    ready.push_back(idx);
+                if let Some(idx) = completed {
+                    if config.mode == Mode::Range
+                        && config.count.is_some_and(|limit| targets[idx].sent < limit)
+                    {
+                        ready.push_back(idx);
+                    }
                 }
             })
             .map_err(|e| format!("receive ICMP: {e}"))?;
