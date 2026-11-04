@@ -1,6 +1,6 @@
 # Roadmap und GitHub-Issue-Organisation
 
-Stand: **04.11.2026**. Rust-Code und Linux-CI sind in [Draft-PR #18](https://github.com/derdigitalaffine/piping/pull/18) implementiert. [QA-Lauf #41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384) besteht inklusive 11 echter Loopback-Szenarien. Produktionsfreigabe ist an die verbleibenden QA-Gates gebunden. Diese Roadmap übernimmt den P0/P1/P2-Ansatz, kritischen Pfad, Go-Live-/DoD-Gates und zentrale Tracking-Organisation von `kostuemwettbewerb`.
+Stand: **04.11.2026**. Rust-Code und Linux-CI sind via [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19) auf **main** integriert. [QA-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit-, 4 CLI- und 11 echte Loopback-Prüfungen, MSRV-1.85 und Source-Installation. Neuere Runner beendeten ihre Jobs ohne Schritte, Ursache ungeklärt; siehe QA-Bericht. Produktionsfreigabe ist an die verbleibenden QA-Gates gebunden. Diese Roadmap übernimmt den P0/P1/P2-Ansatz, kritischen Pfad, Go-Live-/DoD-Gates und zentrale Tracking-Organisation von `kostuemwettbewerb`.
 
 ## Prioritäten
 

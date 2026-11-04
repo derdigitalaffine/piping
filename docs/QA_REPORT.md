@@ -1,6 +1,6 @@
 # piping – QA-Protokoll und Freigabegates
 
-Stand: **04.11.2026**, Kandidat `v0.1.0` auf [PR #18](https://github.com/derdigitalaffine/piping/pull/18), Branch `feat/rust-linux-ping-engine`.
+Stand: **04.11.2026**, Kandidat `v0.1.0` auf `main` nach [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19).
 
 ## Nachweislich erfolgreiche Linux-CI-Prüfungen
 
@@ -42,6 +42,10 @@ Stand: **04.11.2026**, Kandidat `v0.1.0` auf [PR #18](https://github.com/derdigi
 - Die Quelle wurde auf demselben CI-Runner zusätzlich mit isoliertem `CARGO_TARGET_DIR` installiert, `--help`/`--version` und `-4 -c 2 127.0.0.1` wurden unter dem installierten Pfad erfolgreich ausgeführt.
 - Zwei neue Rust-Tests (DNS Numeric/Familie, Resolver-Deadline) erhöhen die Anzahl auf **26 Unit- + 4 CLI-Tests**. Die Paket-/Duplikat-Regressionstests sind weiterhin aktiv.
 - Compiler-/Installationsjobs sind voneinander isoliert, damit eine No-Feature-Installation das mit `tui` gebaute Binary nicht überschreibt.
+
+## Nach-Merge-CI-Transparenz
+
+Die nach dem grünen Code-Commit erfolgte Änderung war ausschließlich Dokumentation. [Compare 997606...21c45](https://github.com/derdigitalaffine/piping/compare/997606d2cd2ced6548474dc8d1cf95cbdc757099...21c45e1111b8bb4ea9b73a8aa13797ea4cdafb24) zeigt sechs Dokumentdateien, keine Rust- oder Workflowänderung. Danach scheiterten die GitHub-Actions-Läufe auf dem Dokumentations- bzw. Main-Head **vor jedem Jobschritt**; [Main-Run #41807582908](https://github.com/derdigitalaffine/piping/actions/runs/41807582908) hat zwei fehlgeschlagene Jobs mit **0 Steps und ohne verfügbare Logs**. Ursache nicht bestätigt; daraus darf weder ein Compilerfehler noch ein Testerfolg abgeleitet werden. Der letzte vollständige Quellcode-Testnachweis ist [#41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867). Für formelle Release-Freigabe sind erneut ausführbare Runner erforderlich.
 
 ## Release-Artefakte
 

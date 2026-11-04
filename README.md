@@ -2,9 +2,9 @@
 
 **piping** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat im [PR #18](https://github.com/derdigitalaffine/piping/pull/18).** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben.
+> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat auf **`main`** – [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19) gemergt.** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben. Die neuesten GitHub-Actions-Jobs starteten nach dem Merge ohne Schritte/Logs und gelten **nicht** als bestandene Prüfung.
 
-## Benutzbare CLI im Entwicklungsbranch
+## CLI-Befehle auf `main`
 
 ```sh
 piping example.com
@@ -22,7 +22,7 @@ piping tui example.com  # optionales Cargo-Feature 'tui'
 
 ## Linux-Build und Installation
 
-Benötigt: Linux (zuerst x86_64, dann aarch64), stable Rust/Cargo und ein ICMP-Echo-fähiges Netzwerk. Aus dem Entwicklungsbranch (bzw. nach dessen Merge aus `main`) bauen:
+Benötigt: Linux (zuerst x86_64, dann aarch64), stable Rust/Cargo und ein ICMP-Echo-fähiges Netzwerk. Aus dem Hauptbranch bauen:
 
 ```sh
 cargo build --release --locked
