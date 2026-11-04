@@ -604,7 +604,6 @@ mod tests {
         assert_eq!(csv_escape("a\"b"), "\"a\"\"b\"");
     }
 
-
     fn fake_config() -> Config {
         let args: Vec<String> = ["-q", "-c", "1", "127.0.0.1"]
             .into_iter()
@@ -638,18 +637,45 @@ mod tests {
         targets[0].stats.on_send();
         let mut pending = HashMap::new();
         let start = Instant::now();
-        pending.insert(42, Pending {
-            target: 0,
-            sent_at: start,
-            deadline: start + Duration::from_secs(1),
-            seq: 42,
-            second: 0,
-        });
+        pending.insert(
+            42,
+            Pending {
+                target: 0,
+                sent_at: start,
+                deadline: start + Duration::from_secs(1),
+                seq: 42,
+                second: 0,
+            },
+        );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(&config, fake_incoming(ip, 42, 999, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
-        on_reply(&config, fake_incoming(ip, 41, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
-        on_reply(&config, fake_incoming(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(
+            &config,
+            fake_incoming(ip, 42, 999, 42),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
+        on_reply(
+            &config,
+            fake_incoming(ip, 41, 123, 42),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
+        on_reply(
+            &config,
+            fake_incoming(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), 42, 123, 42),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
         assert_eq!(targets[0].stats.received, 0);
         assert!(pending.contains_key(&42));
     }
@@ -664,19 +690,38 @@ mod tests {
         targets[0].stats.on_send();
         let mut pending = HashMap::new();
         let start = Instant::now();
-        pending.insert(42, Pending {
-            target: 0,
-            sent_at: start,
-            deadline: start + Duration::from_secs(1),
-            seq: 42,
-            second: 0,
-        });
+        pending.insert(
+            42,
+            Pending {
+                target: 0,
+                sent_at: start,
+                deadline: start + Duration::from_secs(1),
+                seq: 42,
+                second: 0,
+            },
+        );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(&config, fake_incoming(ip, 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(
+            &config,
+            fake_incoming(ip, 42, 123, 42),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
         assert_eq!(targets[0].stats.received, 1);
         assert!(pending.is_empty());
-        on_reply(&config, fake_incoming(ip, 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(
+            &config,
+            fake_incoming(ip, 42, 123, 42),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
         assert_eq!(targets[0].stats.received, 1);
         assert_eq!(targets[0].stats.duplicates, 1);
     }
@@ -689,20 +734,30 @@ mod tests {
         targets[0].stats.on_send();
         let mut pending = HashMap::new();
         let start = Instant::now();
-        pending.insert(7, Pending {
-            target: 0,
-            sent_at: start - Duration::from_secs(2),
-            deadline: start - Duration::from_secs(1),
-            seq: 7,
-            second: 0,
-        });
+        pending.insert(
+            7,
+            Pending {
+                target: 0,
+                sent_at: start - Duration::from_secs(2),
+                deadline: start - Duration::from_secs(1),
+                seq: 7,
+                second: 0,
+            },
+        );
         let mut history = History::new(5);
         let mut recent = VecDeque::new();
-        on_reply(&config, fake_incoming(ip, 7, 123, 7), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(
+            &config,
+            fake_incoming(ip, 7, 123, 7),
+            123,
+            &mut pending,
+            &mut targets,
+            &mut history,
+            &mut recent,
+        );
         assert_eq!(targets[0].stats.received, 0);
         assert!(pending.contains_key(&7));
     }
-
 
     #[test]
     fn completed_probe_queue_is_capped() {
