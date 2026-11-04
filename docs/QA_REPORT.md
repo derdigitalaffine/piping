@@ -92,3 +92,7 @@ Offene Gates: `cargo fmt --check`, Rust 1.85, Clippy alle Features, `cargo test`
 ## pipi v0.3 Farb-/Formular-TUI
 
 Die neue v0.3-Version erweitert das im [grünen v0.2-Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991) getestete Linux-Tool um ein Host-loses Menü, neun konfigurierbare Module, einen begrenzten Live-Ausgabebereich, Farbfallback und eine zusätzliche aktive ARP-Bestätigung. Die Prüfung erfolgt mit `tests/tui_console_pty.py` (echtes PTY, NO_COLOR, CLI ohne TTY, Formularnavigation, interaktiver Loopback, Rücksetzen der Terminalattribute) plus Rust-1.85-/Stable-/Clippy-/Fmt-/Netzwerk-Suite. **Der ältere v0.2-Testlauf beweist nicht automatisch die Freigabe von v0.3.**
+
+## MTR Live In-place v0.3.1 – Prüfgates
+
+Neuer Hop-basierter Terminal-Diff-Renderer: keine wiederholte `ESC[2J`-Vollbildlöschung pro Probe, nur geänderte Zeilen werden an ihren Cursorpositionen aktualisiert. Im Menü wird ein begrenztes einzeiliges Trace-Protokoll pro Hop verwendet statt wiederholter Tabellen. PTY-Tests prüfen mehrere MTR-Zyklen, Terminal-Restore und die Darstellung im Menü, Unit-Tests die Erhaltung der Hop-Zeilen und die einzelne Zeilenaktualisierung. Die echte v0.3.1-CI-Abnahme ist erst nach einem grünen Runner-Run bestätigt; vorher keine Freigabe.

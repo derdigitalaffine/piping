@@ -38,3 +38,11 @@ Das Menü öffnet keine Scan-Sockets. Beim ARP SCAN und LOCAL SCAN muss die Netz
     python3 tests/tui_console_pty.py ./target/release/pipi
 
 Der PTY-Test prüft ohne Host gestartete Menüs, Tasten, Farbe/NO_COLOR, aktive Scan-Bestätigung, Ping-Loopback, Terminal-Restore und den Nicht-TTY-Fallback.
+
+## MTR-Ansicht: stabile Live-Zeilen (v0.3.1)
+
+`pipi trace HOST` öffnet auf interaktivem TTY bei installiertem `tui`-Feature automatisch die Live-Hop-Tabelle; `pipi trace --tui HOST` erzwingt dieselbe Ansicht. `pipi trace --text HOST` gibt weiterhin pro abgeschlossenen Zyklus eine normale Texttabelle aus. Eine Weiterleitung (z. B. `pipi trace -c 2 127.0.0.1 > trace.txt`) bleibt automatisch bei der Textausgabe.
+
+Der Live-Renderer zeichnet die Oberfläche **nur beim ersten Frame oder bei Terminal-Resize vollständig**. Für jede weitere Probe werden ausschließlich veränderte Textzeilen mit ANSI-Cursorposition und Zeilenlöschung überschrieben. Ein gerade nicht neu gemessener Hop bleibt über Zyklusgrenzen sichtbar; Packet-Loss, RTT/Avg und Smoke-Sparkline werden je Hop aktualisiert. Auch der TRACE-Modus im Host-losen Menü zeigt eine solche Tabelle statt pro Zyklus eine neue Tabelle ins Log zu schreiben. Fehlertexte werden weiterhin sichtbar angezeigt.
+
+Abnahmetests: reine Frame-Diff-Tests, stabile Hop-Index-Tests, PTY-Integration für mehrere Zyklen ohne wiederholte Vollbild-Clears, Menü-TRACE und Nicht-TTY-Fallback.
