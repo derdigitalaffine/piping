@@ -44,13 +44,13 @@ struct PollFd {
 unsafe extern "C" {
     fn socket(family: c_int, ty: c_int, protocol: c_int) -> c_int;
     fn close(fd: c_int) -> c_int;
-    fn bind(fd: c_int, addr: *const SockAddrNl, len: u32) -> c_int;
+    fn bind(fd: c_int, addr: *const c_void, len: u32) -> c_int;
     fn sendto(
         fd: c_int,
         data: *const c_void,
         len: usize,
         flags: c_int,
-        addr: *const SockAddrNl,
+        addr: *const c_void,
         addr_len: u32,
     ) -> isize;
     fn recvfrom(
@@ -58,7 +58,7 @@ unsafe extern "C" {
         data: *mut c_void,
         len: usize,
         flags: c_int,
-        addr: *mut SockAddrNl,
+        addr: *mut c_void,
         addr_len: *mut u32,
     ) -> isize;
     fn poll(fds: *mut PollFd, n: usize, timeout_ms: c_int) -> c_int;
@@ -237,7 +237,7 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
         groups: 0,
     };
     // SAFETY: initialized sockaddr_nl, size matches Linux layout.
-    if unsafe { bind(sock.0, &local, 12) } < 0 {
+    if unsafe { bind(sock.0, (&local as *const SockAddrNl).cast(), 12) } < 0 {
         return Err(format!(
             "cannot bind route netlink socket: {}",
             io::Error::last_os_error()
@@ -255,7 +255,7 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
         groups: 0,
     };
     // SAFETY: req and kernel are live, correctly sized buffers.
-    let sent = unsafe { sendto(sock.0, req.as_ptr().cast(), req.len(), 0, &kernel, 12) };
+    let sent = unsafe { sendto(sock.0, req.as_ptr().cast(), req.len(), 0, (&kernel as *const SockAddrNl).cast(), 12) };
     if sent != req.len() as isize {
         return Err(format!(
             "RTM_GETNEIGH request failed: {}",

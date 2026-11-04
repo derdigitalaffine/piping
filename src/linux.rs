@@ -66,7 +66,7 @@ unsafe extern "C" {
         data: *const c_void,
         size: usize,
         flags: c_int,
-        addr: *const SockAddr,
+        addr: *const c_void,
         len: u32,
     ) -> isize;
     fn recvfrom(
@@ -74,7 +74,7 @@ unsafe extern "C" {
         data: *mut c_void,
         size: usize,
         flags: c_int,
-        addr: *mut SockAddr,
+        addr: *mut c_void,
         len: *mut u32,
     ) -> isize;
     fn poll(fds: *mut PollFd, count: usize, timeout_ms: c_int) -> c_int;

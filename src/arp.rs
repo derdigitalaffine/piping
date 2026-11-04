@@ -48,13 +48,13 @@ unsafe extern "C" {
     fn socket(domain: c_int, ty: c_int, protocol: c_int) -> c_int;
     fn close(fd: c_int) -> c_int;
     fn ioctl(fd: c_int, request: c_ulong, arg: *mut IfReq) -> c_int;
-    fn bind(fd: c_int, addr: *const SockAddrLl, len: u32) -> c_int;
+    fn bind(fd: c_int, addr: *const c_void, len: u32) -> c_int;
     fn sendto(
         fd: c_int,
         data: *const c_void,
         len: usize,
         flags: c_int,
-        addr: *const SockAddrLl,
+        addr: *const c_void,
         addr_len: u32,
     ) -> isize;
     fn recvfrom(
@@ -62,7 +62,7 @@ unsafe extern "C" {
         data: *mut c_void,
         len: usize,
         flags: c_int,
-        addr: *mut SockAddrLl,
+        addr: *mut c_void,
         addr_len: *mut u32,
     ) -> isize;
     fn poll(fds: *mut PollFd, n: usize, timeout_ms: c_int) -> c_int;
@@ -94,7 +94,7 @@ fn interface_ipv4(interface: &str) -> Result<Ipv4Addr, String> {
     };
     ifreq.name[..interface.len()].copy_from_slice(interface.as_bytes());
     // SAFETY: aligned 40-byte ifreq, valid NUL-terminated interface name.
-    if unsafe { ioctl(sock.0, SIOCGIFADDR, &mut ifreq) } < 0 {
+    if unsafe { ioctl(sock.0, SIOCGIFADDR, (&mut ifreq as *mut IfReq).cast()) } < 0 {
         return Err(format!(
             "cannot get IPv4 address for {interface}: {}",
             io::Error::last_os_error()
@@ -330,7 +330,7 @@ pub fn scan(
         addr: [0; 8],
     };
     // SAFETY: sockaddr_ll has the Linux fixed 20-byte ABI.
-    if unsafe { bind(sock.0, &local, 20) } < 0 {
+    if unsafe { bind(sock.0, (&local as *const SockAddrLl).cast(), 20) } < 0 {
         return Err(arp_error(
             "cannot bind Ethernet ARP socket",
             io::Error::last_os_error(),
@@ -361,7 +361,7 @@ pub fn scan(
         if sent < targets.len() && now >= next_send {
             let frame = request(own_mac, own_ip, targets[sent]);
             // SAFETY: frame and destination sockaddr_ll are initialized and live.
-            let wrote = unsafe { sendto(sock.0, frame.as_ptr().cast(), frame.len(), 0, &dest, 20) };
+            let wrote = unsafe { sendto(sock.0, frame.as_ptr().cast(), frame.len(), 0, (&dest as *const SockAddrLl).cast(), 20) };
             if wrote < 0 {
                 return Err(arp_error("send ARP request", io::Error::last_os_error()));
             }
@@ -413,7 +413,7 @@ pub fn scan(
                     buffer.as_mut_ptr().cast(),
                     buffer.len(),
                     MSG_DONTWAIT,
-                    &mut source,
+                    (&mut source as *mut SockAddrLl).cast(),
                     &mut src_len,
                 )
             };

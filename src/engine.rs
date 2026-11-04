@@ -278,9 +278,7 @@ fn on_reply(
         {
             return None;
         }
-        let Some(probe) = pending.remove(&token) else {
-            return None;
-        };
+        let probe = pending.remove(&token)?;
         let ms = now.duration_since(probe.sent_at).as_secs_f64() * 1000.0;
         let target = &mut targets[probe.target];
         target.stats.on_reply(ms);

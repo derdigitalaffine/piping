@@ -49,7 +49,7 @@ struct PollFd {
 struct Control([u8; 256]);
 
 unsafe extern "C" {
-    fn setsockopt(fd: c_int, level: c_int, option: c_int, value: *const c_int, len: u32) -> c_int;
+    fn setsockopt(fd: c_int, level: c_int, option: c_int, value: *const c_void, len: u32) -> c_int;
     fn recvmsg(fd: c_int, message: *mut MsgHdr, flags: c_int) -> isize;
     fn poll(fds: *mut PollFd, count: usize, timeout: c_int) -> c_int;
 }
@@ -190,7 +190,7 @@ impl TraceSocket {
             (SOL_IP, IP_RECVERR)
         };
         // SAFETY: valid owned socket and initialized integer option.
-        if unsafe { setsockopt(sock.fd(), level, option, &one, 4) } < 0 {
+        if unsafe { setsockopt(sock.fd(), level, option, (&one as *const c_int).cast(), 4) } < 0 {
             return Err(format!(
                 "IP_RECVERR required for tracing: {}",
                 io::Error::last_os_error()
@@ -207,7 +207,7 @@ impl TraceSocket {
             (SOL_IP, IP_TTL)
         };
         // SAFETY: packet TTL/hop limit only affects this private ping socket.
-        if unsafe { setsockopt(self.socket.fd(), level, option, &value, 4) } < 0 {
+        if unsafe { setsockopt(self.socket.fd(), level, option, (&value as *const c_int).cast(), 4) } < 0 {
             return Err(io::Error::last_os_error());
         }
         self.socket.send(dest, packet)

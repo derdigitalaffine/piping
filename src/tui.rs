@@ -1,7 +1,7 @@
 //! Minimal, dependency-free, viewport-sized terminal dashboard.
 //! Alternate screen is opt-in; tty settings stay cooked and are not modified.
 
-use std::ffi::{c_int, c_ulong};
+use std::ffi::{c_int, c_ulong, c_void};
 use std::io::{self, IsTerminal, Write};
 
 const TIOCGWINSZ: c_ulong = 0x5413;
@@ -24,7 +24,7 @@ pub struct Screen;
 pub fn dimensions() -> (usize, usize) {
     let mut ws = WinSize::default();
     // SAFETY: Linux TIOCGWINSZ reads a 4 x u16 initialized writable struct.
-    if unsafe { ioctl(1, TIOCGWINSZ, &mut ws) } == 0 && ws.col > 0 && ws.row > 0 {
+    if unsafe { ioctl(1, TIOCGWINSZ, (&mut ws as *mut WinSize).cast()) } == 0 && ws.col > 0 && ws.row > 0 {
         (usize::from(ws.col), usize::from(ws.row))
     } else {
         (80, 24)
