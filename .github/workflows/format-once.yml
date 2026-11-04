@@ -1,0 +1,30 @@
+name: Temporary rustfmt for pipi MTR incremental renderer
+on:
+  push:
+    branches: ["feat/mtr-inplace-live-refresh"]
+permissions:
+  contents: write
+jobs:
+  rustfmt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/mtr-inplace-live-refresh
+          persist-credentials: true
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+      - name: Format Rust code once and push to feature branch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo fmt --all
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src tests
+          if ! git diff --cached --quiet; then
+            git commit -m "style: cargo fmt MTR incremental render and menu trace"
+            git push origin HEAD:feat/mtr-inplace-live-refresh
+          fi
