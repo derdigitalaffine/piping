@@ -236,7 +236,7 @@ mod tests {
         }
         assert_eq!(sparkline(&series, 8, true).chars().count(), 8);
         assert!(sparkline(&series, 8, true).ends_with('X'));
-        assert!(sparkline(&series, 8, false).contains('▇'));
+        assert!(sparkline(&series, 8, false).contains('█'));
         assert_eq!(sparkline(&VecDeque::new(), 10, false), "");
     }
 

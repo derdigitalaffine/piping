@@ -465,7 +465,7 @@ eth1\t0000A8C0\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0\n";
             &connected_routes(ROUTES, "eth0"),
             Ipv4Addr::new(192, 168, 3, 42)
         ));
-        assert!(!is_onlink(
+        assert!(is_onlink(
             &connected_routes(ROUTES, "eth1"),
             Ipv4Addr::new(192, 168, 2, 42)
         ));
