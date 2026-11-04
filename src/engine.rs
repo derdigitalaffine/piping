@@ -10,7 +10,7 @@ use std::collections::{HashMap, VecDeque};
 use std::io::{self, IsTerminal, Read, Write};
 use std::net::SocketAddr;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::{Duration, Instant};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 static INTERRUPTED: AtomicBool = AtomicBool::new(false);
 
@@ -50,6 +50,14 @@ fn emit(line: &str) {
         }
         eprintln!("piping: stdout: {e}");
     }
+}
+
+/// Epoch milliseconds use UTC for machine output; probe RTTs still use monotonic Instant.
+fn timestamp_unix_ms() -> u128 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis()
 }
 
 fn json_escape(input: &str) -> String {
@@ -101,7 +109,7 @@ fn init_output(config: &Config, targets: &[Target]) {
             }
         }
         Output::Jsonl => {}
-        Output::Csv => emit("event,target,ip,seq,rtt_ms,sent,received,loss_pct"),
+        Output::Csv => emit("event,target,ip,seq,rtt_ms,sent,received,loss_pct,timestamp_unix_ms"),
     }
 }
 
@@ -217,14 +225,16 @@ fn event_reply(config: &Config, target: &Target, seq: u16, ms: f64, bytes: usize
             target.addr.ip()
         )),
         Output::Jsonl => emit(&format!(
-            "{{\"schema\":1,\"event\":\"reply\",\"target\":\"{}\",\"ip\":\"{}\",\"seq\":{seq},\"rtt_ms\":{ms:.3}}}",
+            "{{\"schema\":1,\"event\":\"reply\",\"target\":\"{}\",\"ip\":\"{}\",\"seq\":{seq},\"rtt_ms\":{ms:.3},\"timestamp_unix_ms\":{}}}",
             json_escape(&target.label),
-            target.addr.ip()
+            target.addr.ip(),
+            timestamp_unix_ms()
         )),
         Output::Csv => emit(&format!(
-            "reply,{},{},{seq},{ms:.3},,,",
+            "reply,{},{},{seq},{ms:.3},,,,{}",
             csv_escape(&target.label),
-            csv_escape(&target.addr.ip().to_string())
+            csv_escape(&target.addr.ip().to_string()),
+            timestamp_unix_ms()
         )),
     }
 }
@@ -236,14 +246,16 @@ fn event_timeout(config: &Config, target: &Target, seq: u16) {
     match config.output {
         Output::Text => {}
         Output::Jsonl => emit(&format!(
-            "{{\"schema\":1,\"event\":\"timeout\",\"target\":\"{}\",\"ip\":\"{}\",\"seq\":{seq}}}",
+            "{{\"schema\":1,\"event\":\"timeout\",\"target\":\"{}\",\"ip\":\"{}\",\"seq\":{seq},\"timestamp_unix_ms\":{}}}",
             json_escape(&target.label),
-            target.addr.ip()
+            target.addr.ip(),
+            timestamp_unix_ms()
         )),
         Output::Csv => emit(&format!(
-            "timeout,{},{},{seq},,,,",
+            "timeout,{},{},{seq},,,,,{}",
             csv_escape(&target.label),
-            csv_escape(&target.addr.ip().to_string())
+            csv_escape(&target.addr.ip().to_string()),
+            timestamp_unix_ms()
         )),
     }
 }
@@ -364,7 +376,7 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
         Output::Jsonl => {
             for t in targets {
                 emit(&format!(
-                    "{{\"schema\":1,\"event\":\"summary\",\"target\":\"{}\",\"ip\":\"{}\",\"sent\":{},\"received\":{},\"loss_pct\":{:.3},\"min_ms\":{:.3},\"avg_ms\":{:.3},\"max_ms\":{:.3},\"mdev_ms\":{:.3},\"p95_ms\":{:.3},\"jitter_ms\":{:.3},\"duplicates\":{}}}",
+                    "{{\"schema\":1,\"event\":\"summary\",\"target\":\"{}\",\"ip\":\"{}\",\"sent\":{},\"received\":{},\"loss_pct\":{:.3},\"min_ms\":{:.3},\"avg_ms\":{:.3},\"max_ms\":{:.3},\"mdev_ms\":{:.3},\"p95_ms\":{:.3},\"jitter_ms\":{:.3},\"duplicates\":{},\"timestamp_unix_ms\":{}}}",
                     json_escape(&t.label),
                     t.addr.ip(),
                     t.stats.sent,
@@ -376,19 +388,21 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
                     t.stats.mdev(),
                     t.stats.percentile(0.95),
                     t.stats.jitter(),
-                    t.stats.duplicates
+                    t.stats.duplicates,
+                    timestamp_unix_ms()
                 ));
             }
         }
         Output::Csv => {
             for t in targets {
                 emit(&format!(
-                    "summary,{},{},,,{},{},{:.3}",
+                    "summary,{},{},,,{},{},{:.3},{}",
                     csv_escape(&t.label),
                     csv_escape(&t.addr.ip().to_string()),
                     t.stats.sent,
                     t.stats.received,
-                    t.stats.loss_percent()
+                    t.stats.loss_percent(),
+                    timestamp_unix_ms()
                 ));
             }
         }
