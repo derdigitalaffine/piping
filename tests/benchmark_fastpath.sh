@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # High-rate measurement ONLY against the local kernel loopback, no external target.
 set -uo pipefail
-binary="./target/release/piping"
+binary="./target/release/pipi"
 if [[ $# -gt 0 ]]; then binary="$1"; fi
 out=$(mktemp)
 metrics=$(mktemp)

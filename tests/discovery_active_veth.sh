@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Disposable virtual-only two-host ARP test. Never probe host/public interfaces.
 set -uo pipefail
-binary="./target/release/piping"
+binary="./target/release/pipi"
 if [[ $# -gt 0 ]]; then binary="$1"; fi
 if ! command -v ip >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
   echo "SKIP: cannot create isolated veth pair"; exit 77
 fi
-iface="piping-ci0"
-peer="piping-ci1"
+iface="pipi-ci0"
+peer="pipi-ci1"
 cleanup() { sudo -n ip link del "$iface" 2>/dev/null || true; }
 if ip link show "$iface" >/dev/null 2>&1 || ip link show "$peer" >/dev/null 2>&1; then
   echo "SKIP: reserved test interface name already exists; do not modify it"

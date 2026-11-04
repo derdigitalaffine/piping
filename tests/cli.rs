@@ -1,6 +1,6 @@
 use std::process::Command;
 
-fn piping(args: &[&str]) -> std::process::Output {
+fn pipi(args: &[&str]) -> std::process::Output {
     Command::new(env!("CARGO_BIN_EXE_piping"))
         .args(args)
         .output()
@@ -9,20 +9,20 @@ fn piping(args: &[&str]) -> std::process::Output {
 
 #[test]
 fn help_and_version_require_no_sockets() {
-    let help = piping(&["--help"]);
+    let help = pipi(&["--help"]);
     assert!(help.status.success());
     let text = String::from_utf8(help.stdout).unwrap();
-    assert!(text.contains("piping fast"));
-    assert!(text.contains("piping range"));
-    assert!(text.contains("piping monitor"));
-    assert!(text.contains("piping discover"));
+    assert!(text.contains("pipi fast"));
+    assert!(text.contains("pipi range"));
+    assert!(text.contains("pipi monitor"));
+    assert!(text.contains("pipi discover"));
 
-    let version = piping(&["--version"]);
+    let version = pipi(&["--version"]);
     assert!(version.status.success());
     assert!(
         String::from_utf8(version.stdout)
             .unwrap()
-            .starts_with("piping ")
+            .starts_with("pipi ")
     );
 }
 
@@ -36,7 +36,7 @@ fn argument_errors_have_exit_code_2() {
         vec!["range", "192.0.2.0/8"],
         vec!["range", "192.0.2.3-192.0.2.1"],
     ] {
-        let result = piping(&args);
+        let result = pipi(&args);
         assert_eq!(result.status.code(), Some(2), "{args:?}");
         assert!(!result.stderr.is_empty(), "{args:?}");
     }
@@ -44,7 +44,7 @@ fn argument_errors_have_exit_code_2() {
 
 #[test]
 fn no_implicit_fullscreen_ui() {
-    let result = piping(&["tui", "--help"]);
+    let result = pipi(&["tui", "--help"]);
     assert!(result.status.success());
     assert!(
         !String::from_utf8(result.stdout)
@@ -55,13 +55,13 @@ fn no_implicit_fullscreen_ui() {
 
 #[test]
 fn invalid_format_rejected_without_socket() {
-    let result = piping(&["fast", "--output", "xml", "127.0.0.1"]);
+    let result = pipi(&["fast", "--output", "xml", "127.0.0.1"]);
     assert_eq!(result.status.code(), Some(2));
 }
 
 #[test]
 fn discover_help_has_no_socket_or_privilege_requirements() {
-    let result = piping(&["discover", "--help"]);
+    let result = pipi(&["discover", "--help"]);
     assert!(result.status.success());
     let stdout = String::from_utf8(result.stdout).unwrap();
     assert!(stdout.contains("rtnetlink") || stdout.contains("RTM_GETNEIGH"));
@@ -77,7 +77,7 @@ fn discovery_invalid_flags_fail_without_network_packets() {
         vec!["discover", "--interface", "../evil"],
         vec!["discover", "--max-results", "4097"],
     ] {
-        let result = piping(&args);
+        let result = pipi(&args);
         assert_eq!(result.status.code(), Some(2), "{args:?}");
     }
 }

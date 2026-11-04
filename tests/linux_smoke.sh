@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Real Linux loopback acceptance, without external network traffic or sysctl edits.
 set -uo pipefail
-binary="./target/debug/piping"
+binary="./target/debug/pipi"
 if [[ $# -ge 1 ]]; then binary="$1"; fi
 failed=0
 skipped=0
@@ -77,7 +77,7 @@ assert all(int(r["timestamp_unix_ms"]) > 1700000000000 for r in rows), rows
   kill -INT "$child" 2>/dev/null
   wait "$child"
   status=$?
-  if [[ "$status" -eq 0 ]] && grep -q "piping statistics" "$tmp"; then
+  if [[ "$status" -eq 0 ]] && grep -q "pipi statistics" "$tmp"; then
     pass "SIGINT prints statistics and exits 0"
   else
     fail "SIGINT handling (exit=$status)"

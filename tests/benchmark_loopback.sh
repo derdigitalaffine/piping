@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Controlled, short IPv4 loopback measurement. Never flood external destinations.
 set -uo pipefail
-binary="./target/release/piping"
+binary="./target/release/pipi"
 if [[ $# -ge 1 ]]; then binary="$1"; fi
 count=201
 pps=100

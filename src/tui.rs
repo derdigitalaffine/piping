@@ -93,7 +93,7 @@ impl Screen {
         rows.push("RTT distribution (older -> newer):".to_owned());
         rows.extend(graph_lines.iter().skip(graph_lines.len().saturating_sub(visible)).cloned());
         let data = frame(
-            &format!("piping | PING {}", label),
+            &format!("pipi | PING {}", label),
             &rows,
             "Ctrl-C exit  |  monotonic RTT  |  no remote telemetry",
             width,

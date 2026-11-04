@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Real passive Linux neighbor discovery: read-only rtnetlink, no root or probes.
 set -euo pipefail
-binary="./target/release/piping"
+binary="./target/release/pipi"
 if [[ $# -gt 0 ]]; then binary="$1"; fi
 "$binary" discover --help | grep -q 'RTM_GETNEIGH'
 json=$(mktemp)
@@ -32,7 +32,7 @@ for row in rows:
 print("PASS passive IPv6 NDP CSV (%d neighbor(s))" % len(rows))
 PY
 set +e
-"$binary" discover --active 198.18.0.0/30 --pps 101 --interface piping-ci0 >/dev/null 2>&1
+"$binary" discover --active 198.18.0.0/30 --pps 101 --interface pipi-ci0 >/dev/null 2>&1
 rc=$?
 set -e
 test "$rc" -eq 2
