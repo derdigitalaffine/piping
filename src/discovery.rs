@@ -238,7 +238,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     let total = rows.len();
     let truncated = total > options.max_results;
     rows.truncate(options.max_results);
-    display(&rows, &interfaces, options.output, total, truncated)?;
+    display(&rows, &interfaces, options.output, total, truncated, options.active.is_some())?;
     Ok(0)
 }
 
@@ -248,6 +248,7 @@ fn display(
     output: Output,
     total: usize,
     truncated: bool,
+    active: bool,
 ) -> Result<(), String> {
     match output {
         Output::Text => emit("IP ADDRESS                              INTERFACE         MAC / LINK ADDRESS              STATE")?,
@@ -278,7 +279,7 @@ fn display(
             "{} neighbor(s) shown, {} total{}; {}",
             neighbors.len(), total,
             if truncated { " (truncated by --max-results)" } else { "" },
-            if neighbors.iter().any(|n| n.active) { "explicit ARP discovery" } else { "passive kernel cache; may be stale" }
+            if active { "explicit ARP discovery" } else { "passive kernel cache; may be stale" }
         )),
         Output::Jsonl => emit(&format!(
             "{{\"schema\":1,\"event\":\"summary\",\"total\":{total},\"shown\":{},\"truncated\":{truncated}}}",
