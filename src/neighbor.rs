@@ -44,14 +44,22 @@ struct PollFd {
 unsafe extern "C" {
     fn socket(family: c_int, ty: c_int, protocol: c_int) -> c_int;
     fn close(fd: c_int) -> c_int;
-    fn bind(fd: c_int, addr: *const SockAddrNl, len: u32) -> c_int;
+    fn bind(fd: c_int, addr: *const c_void, len: u32) -> c_int;
     fn sendto(
-        fd: c_int, data: *const c_void, len: usize, flags: c_int,
-        addr: *const SockAddrNl, addr_len: u32,
+        fd: c_int,
+        data: *const c_void,
+        len: usize,
+        flags: c_int,
+        addr: *const c_void,
+        addr_len: u32,
     ) -> isize;
     fn recvfrom(
-        fd: c_int, data: *mut c_void, len: usize, flags: c_int,
-        addr: *mut SockAddrNl, addr_len: *mut u32,
+        fd: c_int,
+        data: *mut c_void,
+        len: usize,
+        flags: c_int,
+        addr: *mut c_void,
+        addr_len: *mut u32,
     ) -> isize;
     fn poll(fds: *mut PollFd, n: usize, timeout_ms: c_int) -> c_int;
 }
@@ -60,7 +68,9 @@ struct Socket(RawFd);
 impl Drop for Socket {
     fn drop(&mut self) {
         // SAFETY: Socket uniquely owns its Linux file descriptor.
-        unsafe { close(self.0); }
+        unsafe {
+            close(self.0);
+        }
     }
 }
 
@@ -107,7 +117,9 @@ fn neighbor_message(data: &[u8]) -> Result<Option<Neighbor>, String> {
         let value = &data[offset + 4..offset + len];
         match (kind, family) {
             (NDA_DST, AF_INET) if value.len() == 4 => {
-                ip = Some(IpAddr::V4(Ipv4Addr::new(value[0], value[1], value[2], value[3])));
+                ip = Some(IpAddr::V4(Ipv4Addr::new(
+                    value[0], value[1], value[2], value[3],
+                )));
             }
             (NDA_DST, AF_INET6) if value.len() == 16 => {
                 let bytes: [u8; 16] = value.try_into().map_err(|_| "bad IPv6 neighbor")?;
@@ -118,12 +130,20 @@ fn neighbor_message(data: &[u8]) -> Result<Option<Neighbor>, String> {
             }
             _ => {}
         }
-        offset = offset.checked_add(align4(len)).ok_or("netlink attribute overflow")?;
+        offset = offset
+            .checked_add(align4(len))
+            .ok_or("netlink attribute overflow")?;
     }
     if offset > data.len() + 3 || data[offset.min(data.len())..].iter().any(|b| *b != 0) {
         return Err("invalid neighbor attribute padding".into());
     }
-    Ok(ip.map(|ip| Neighbor { ifindex, ip, mac, state, active: false }))
+    Ok(ip.map(|ip| Neighbor {
+        ifindex,
+        ip,
+        mac,
+        state,
+        active: false,
+    }))
 }
 
 /// Parse one rtnetlink multipart datagram. Returns true on NLMSG_DONE.
@@ -145,12 +165,16 @@ pub fn parse_batch(frame: &[u8], neighbors: &mut Vec<Neighbor>) -> Result<bool, 
             match ty {
                 NLMSG_DONE => finished = true,
                 NLMSG_ERROR => {
-                    let errno = header.get(16..20)
+                    let errno = header
+                        .get(16..20)
                         .and_then(|b| <[u8; 4]>::try_from(b).ok())
                         .map(i32::from_ne_bytes)
                         .ok_or("malformed netlink error")?;
                     if errno < 0 {
-                        return Err(format!("RTM_GETNEIGH failed: {}", io::Error::from_raw_os_error(errno.checked_neg().unwrap_or(i32::MAX))));
+                        return Err(format!(
+                            "RTM_GETNEIGH failed: {}",
+                            io::Error::from_raw_os_error(errno.checked_neg().unwrap_or(i32::MAX))
+                        ));
                     }
                 }
                 RTM_NEWNEIGH => {
@@ -185,7 +209,9 @@ pub fn interfaces() -> Result<BTreeMap<i32, String>, String> {
         let name = item.file_name().to_string_lossy().to_string();
         let raw = std::fs::read_to_string(item.path().join("ifindex"))
             .map_err(|e| format!("cannot read index for interface {name}: {e}"))?;
-        let index = raw.trim().parse::<i32>()
+        let index = raw
+            .trim()
+            .parse::<i32>()
             .map_err(|_| format!("invalid ifindex for interface {name}"))?;
         result.insert(index, name);
     }
@@ -198,24 +224,52 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
     // SAFETY: Linux sockaddr_nl ABI, well-defined constants and checked syscall result.
     let fd = unsafe { socket(AF_NETLINK, SOCK_RAW | SOCK_CLOEXEC, NETLINK_ROUTE) };
     if fd < 0 {
-        return Err(format!("cannot open read-only route netlink socket: {}", io::Error::last_os_error()));
+        return Err(format!(
+            "cannot open read-only route netlink socket: {}",
+            io::Error::last_os_error()
+        ));
     }
     let sock = Socket(fd);
-    let local = SockAddrNl { family: AF_NETLINK as u16, pad: 0, pid: 0, groups: 0 };
+    let local = SockAddrNl {
+        family: AF_NETLINK as u16,
+        pad: 0,
+        pid: 0,
+        groups: 0,
+    };
     // SAFETY: initialized sockaddr_nl, size matches Linux layout.
-    if unsafe { bind(sock.0, &local, 12) } < 0 {
-        return Err(format!("cannot bind route netlink socket: {}", io::Error::last_os_error()));
+    if unsafe { bind(sock.0, (&local as *const SockAddrNl).cast(), 12) } < 0 {
+        return Err(format!(
+            "cannot bind route netlink socket: {}",
+            io::Error::last_os_error()
+        ));
     }
     let mut req = [0_u8; 28]; // nlmsghdr (16) + ndmsg (12)
     req[0..4].copy_from_slice(&28_u32.to_ne_bytes());
     req[4..6].copy_from_slice(&RTM_GETNEIGH.to_ne_bytes());
     req[6..8].copy_from_slice(&(NLM_F_REQUEST | NLM_F_DUMP).to_ne_bytes());
     req[8..12].copy_from_slice(&SEQ.to_ne_bytes());
-    let kernel = SockAddrNl { family: AF_NETLINK as u16, pad: 0, pid: 0, groups: 0 };
+    let kernel = SockAddrNl {
+        family: AF_NETLINK as u16,
+        pad: 0,
+        pid: 0,
+        groups: 0,
+    };
     // SAFETY: req and kernel are live, correctly sized buffers.
-    let sent = unsafe { sendto(sock.0, req.as_ptr().cast(), req.len(), 0, &kernel, 12) };
+    let sent = unsafe {
+        sendto(
+            sock.0,
+            req.as_ptr().cast(),
+            req.len(),
+            0,
+            (&kernel as *const SockAddrNl).cast(),
+            12,
+        )
+    };
     if sent != req.len() as isize {
-        return Err(format!("RTM_GETNEIGH request failed: {}", io::Error::last_os_error()));
+        return Err(format!(
+            "RTM_GETNEIGH request failed: {}",
+            io::Error::last_os_error()
+        ));
     }
     let deadline = Instant::now() + Duration::from_secs(3);
     let mut buffer = vec![0_u8; 65_536]; // One reusable buffer; no per-message allocation.
@@ -225,8 +279,15 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
         if now >= deadline {
             return Err("rtnetlink neighbor dump exceeded 3s deadline".into());
         }
-        let ms = deadline.saturating_duration_since(now).as_millis().min(3000) as c_int;
-        let mut pollfd = PollFd { fd: sock.0, events: POLLIN, revents: 0 };
+        let ms = deadline
+            .saturating_duration_since(now)
+            .as_millis()
+            .min(3000) as c_int;
+        let mut pollfd = PollFd {
+            fd: sock.0,
+            events: POLLIN,
+            revents: 0,
+        };
         // SAFETY: initialized writable pollfd.
         let polled = unsafe { poll(&mut pollfd, 1, ms) };
         if polled == 0 {
@@ -239,11 +300,23 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
             }
             return Err(format!("rtnetlink poll: {error}"));
         }
-        let mut src = SockAddrNl { family: 0, pad: 0, pid: 0, groups: 0 };
+        let mut src = SockAddrNl {
+            family: 0,
+            pad: 0,
+            pid: 0,
+            groups: 0,
+        };
         let mut src_len = 12_u32;
         // SAFETY: buffer and sockaddr_nl have valid writable storage.
         let received = unsafe {
-            recvfrom(sock.0, buffer.as_mut_ptr().cast(), buffer.len(), 0, &mut src, &mut src_len)
+            recvfrom(
+                sock.0,
+                buffer.as_mut_ptr().cast(),
+                buffer.len(),
+                0,
+                (&mut src as *mut SockAddrNl).cast(),
+                &mut src_len,
+            )
         };
         if received < 0 {
             return Err(format!("rtnetlink recv: {}", io::Error::last_os_error()));

@@ -297,7 +297,7 @@ where
     use std::sync::mpsc::{self, RecvTimeoutError};
     let (tx, rx) = mpsc::sync_channel(1);
     std::thread::Builder::new()
-        .name("piping-dns-resolver".into())
+        .name("pipi-dns-resolver".into())
         .spawn(move || {
             let _ = tx.send(task());
         })
@@ -348,15 +348,17 @@ pub fn resolve(host: &str, family: Option<bool>) -> Result<SocketAddr, CliError>
 
 pub fn help() -> &'static str {
     concat!(
-        "piping 0.1.0 — Linux ICMP Echo diagnostics (Rust)\n",
+        "pipi 0.2.0 — Linux ICMP Echo/trace/neighbor diagnostics (Rust)\n",
         "USAGE:\n",
-        "  piping [OPTIONS] HOST                 Classic ping, Ctrl-C for summary\n",
-        "  piping fast [OPTIONS] HOST            Bounded high-frequency ping\n",
-        "  piping range [OPTIONS] CIDR|START-END ICMP echo sweep\n",
-        "  piping monitor [OPTIONS] HOST         Smoke-style streaming RTT graph\n",
-        "  piping discover [OPTIONS]             ARP/NDP L2 neighbor discovery\n",
-        "  piping tui [OPTIONS] HOST             Optional fullscreen UI (feature tui)\n",
-        "  See 'piping discover --help' for passive cache and active ARP options.\n\n",
+        "  pipi [OPTIONS] HOST                 Classic ping, Ctrl-C for summary\n",
+        "  pipi fast [OPTIONS] HOST            Bounded high-frequency ping\n",
+        "  pipi range [OPTIONS] CIDR|START-END ICMP echo sweep\n",
+        "  pipi monitor [OPTIONS] HOST         Smoke-style streaming RTT graph\n",
+        "  pipi discover [OPTIONS]             ARP/NDP L2 neighbor discovery\n",
+        "  pipi trace [OPTIONS] HOST            MTR-style ICMP hop trace / per-hop Smoke\n",
+        "  pipi neighborhood [OPTIONS]          Local ARP/NDP neighbor graph and TUI\n",
+        "  pipi tui [OPTIONS] HOST             Optional fullscreen UI (feature tui)\n",
+        "  See 'pipi trace --help', 'pipi neighborhood --help' and 'pipi discover --help'.\n\n",
         "COMMON:\n",
         "  -c, --count N       Number of probes (range: per host)\n",
         "  -i, --interval SEC  Time between probes, classic/monitor/tui\n",

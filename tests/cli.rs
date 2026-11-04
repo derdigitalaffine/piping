@@ -1,7 +1,7 @@
 use std::process::Command;
 
-fn piping(args: &[&str]) -> std::process::Output {
-    Command::new(env!("CARGO_BIN_EXE_piping"))
+fn pipi(args: &[&str]) -> std::process::Output {
+    Command::new(env!("CARGO_BIN_EXE_pipi"))
         .args(args)
         .output()
         .expect("run CLI")
@@ -9,20 +9,20 @@ fn piping(args: &[&str]) -> std::process::Output {
 
 #[test]
 fn help_and_version_require_no_sockets() {
-    let help = piping(&["--help"]);
+    let help = pipi(&["--help"]);
     assert!(help.status.success());
     let text = String::from_utf8(help.stdout).unwrap();
-    assert!(text.contains("piping fast"));
-    assert!(text.contains("piping range"));
-    assert!(text.contains("piping monitor"));
-    assert!(text.contains("piping discover"));
+    assert!(text.contains("pipi fast"));
+    assert!(text.contains("pipi range"));
+    assert!(text.contains("pipi monitor"));
+    assert!(text.contains("pipi discover"));
 
-    let version = piping(&["--version"]);
+    let version = pipi(&["--version"]);
     assert!(version.status.success());
     assert!(
         String::from_utf8(version.stdout)
             .unwrap()
-            .starts_with("piping ")
+            .starts_with("pipi ")
     );
 }
 
@@ -36,7 +36,7 @@ fn argument_errors_have_exit_code_2() {
         vec!["range", "192.0.2.0/8"],
         vec!["range", "192.0.2.3-192.0.2.1"],
     ] {
-        let result = piping(&args);
+        let result = pipi(&args);
         assert_eq!(result.status.code(), Some(2), "{args:?}");
         assert!(!result.stderr.is_empty(), "{args:?}");
     }
@@ -44,7 +44,7 @@ fn argument_errors_have_exit_code_2() {
 
 #[test]
 fn no_implicit_fullscreen_ui() {
-    let result = piping(&["tui", "--help"]);
+    let result = pipi(&["tui", "--help"]);
     assert!(result.status.success());
     assert!(
         !String::from_utf8(result.stdout)
@@ -55,13 +55,13 @@ fn no_implicit_fullscreen_ui() {
 
 #[test]
 fn invalid_format_rejected_without_socket() {
-    let result = piping(&["fast", "--output", "xml", "127.0.0.1"]);
+    let result = pipi(&["fast", "--output", "xml", "127.0.0.1"]);
     assert_eq!(result.status.code(), Some(2));
 }
 
 #[test]
 fn discover_help_has_no_socket_or_privilege_requirements() {
-    let result = piping(&["discover", "--help"]);
+    let result = pipi(&["discover", "--help"]);
     assert!(result.status.success());
     let stdout = String::from_utf8(result.stdout).unwrap();
     assert!(stdout.contains("rtnetlink") || stdout.contains("RTM_GETNEIGH"));
@@ -73,11 +73,58 @@ fn discovery_invalid_flags_fail_without_network_packets() {
     for args in [
         vec!["discover", "--active", "10.0.0.0/24"],
         vec!["discover", "--active", "10.0.0.1", "-i", "eth0"],
-        vec!["discover", "--active", "10.0.0.0/24", "-i", "eth0", "--pps", "101"],
+        vec![
+            "discover",
+            "--active",
+            "10.0.0.0/24",
+            "-i",
+            "eth0",
+            "--pps",
+            "101",
+        ],
         vec!["discover", "--interface", "../evil"],
         vec!["discover", "--max-results", "4097"],
     ] {
-        let result = piping(&args);
+        let result = pipi(&args);
         assert_eq!(result.status.code(), Some(2), "{args:?}");
+    }
+}
+
+#[test]
+fn trace_and_neighborhood_help_without_sockets() {
+    for command in ["trace", "neighborhood"] {
+        let output = pipi(&[command, "--help"]);
+        assert!(output.status.success(), "{command}: {:?}", output);
+        let text = String::from_utf8(output.stdout).unwrap();
+        assert!(text.contains("pipi "));
+        assert!(text.contains("--tui"));
+    }
+    assert_eq!(pipi(&["trace"]).status.code(), Some(2));
+    assert_eq!(
+        pipi(&["neighborhood", "--watch", "1"]).status.code(),
+        Some(2)
+    );
+}
+
+#[test]
+fn trace_and_neighborhood_validate_hard_limits_without_network() {
+    for args in [
+        vec!["trace", "--max-hops", "99", "127.0.0.1"],
+        vec!["trace", "--count", "1001", "127.0.0.1"],
+        vec!["trace", "-W", "nan", "127.0.0.1"],
+        vec!["trace", "-4", "-6", "127.0.0.1"],
+        vec!["neighborhood", "--max-results", "10000"],
+        vec!["neighborhood", "--active", "10.0.0.0/24"],
+        vec![
+            "neighborhood",
+            "--active",
+            "10.0.0.0/24",
+            "-i",
+            "eth0",
+            "--watch",
+            "2",
+        ],
+    ] {
+        assert_eq!(pipi(&args).status.code(), Some(2), "{args:?}");
     }
 }

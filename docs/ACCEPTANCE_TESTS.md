@@ -6,9 +6,9 @@
 | --- | --- | --- |
 | A01 | `cargo build --release --locked` auf Linux stable | Binary buildet; Version/Arch dokumentiert |
 | A02 | `cargo fmt`, `clippy -D warnings`, `cargo test` | Alle relevanten Checks grün |
-| A03 | `piping --help` ohne Socketrechte | Return 0 und vollständige Hilfe |
-| A04 | `piping -4 -c 3 127.0.0.1` | 3 gezählte Requests, RTT/Statistik, Exit 0 bei Reply |
-| A05 | `piping -6 -c 3 ::1` | richtige IPv6-Antworten; Skip nur mit Begründung |
+| A03 | `pipi --help` ohne Socketrechte | Return 0 und vollständige Hilfe |
+| A04 | `pipi -4 -c 3 127.0.0.1` | 3 gezählte Requests, RTT/Statistik, Exit 0 bei Reply |
+| A05 | `pipi -6 -c 3 ::1` | richtige IPv6-Antworten; Skip nur mit Begründung |
 | A06 | nicht antwortender Mock-Host | Timeout, 100 % Loss, Exit 1, keine Division durch Null |
 | A07 | ungültige CLI-Flags / Adresse | Exit 2, klare stderr-Meldung, keine Panic |
 | A08 | Fake-Replies: falscher Typ/ID/Seq/Quelle/Payload | werden nicht als Erfolg gezählt |

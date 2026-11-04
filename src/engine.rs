@@ -22,7 +22,7 @@ extern "C" fn stop_signal(_: i32) {
     INTERRUPTED.store(true, Ordering::Relaxed);
 }
 
-fn install_signals() {
+pub(crate) fn install_signals() {
     INTERRUPTED.store(false, Ordering::Relaxed);
     // SAFETY: signal handlers only write a lock-free atomic and do not allocate.
     unsafe {
@@ -31,7 +31,7 @@ fn install_signals() {
     }
 }
 
-fn entropy_nonce() -> Result<u64, String> {
+pub(crate) fn entropy_nonce() -> Result<u64, String> {
     let mut bytes = [0_u8; 8];
     std::fs::File::open("/dev/urandom")
         .and_then(|mut f| f.read_exact(&mut bytes))
@@ -39,7 +39,7 @@ fn entropy_nonce() -> Result<u64, String> {
     Ok(u64::from_be_bytes(bytes))
 }
 
-fn emit(line: &str) {
+pub(crate) fn emit(line: &str) {
     let stdout = io::stdout();
     let mut lock = stdout.lock();
     let result = writeln!(lock, "{line}").and_then(|_| lock.flush());
@@ -48,7 +48,7 @@ fn emit(line: &str) {
             // Following common CLI behavior, pipelines ending early are not fatal.
             std::process::exit(0);
         }
-        eprintln!("piping: stdout: {e}");
+        eprintln!("pipi: stdout: {e}");
     }
 }
 
@@ -278,9 +278,7 @@ fn on_reply(
         {
             return None;
         }
-        let Some(probe) = pending.remove(&token) else {
-            return None;
-        };
+        let probe = pending.remove(&token)?;
         let ms = now.duration_since(probe.sent_at).as_secs_f64() * 1000.0;
         let target = &mut targets[probe.target];
         target.stats.on_reply(ms);
@@ -348,7 +346,7 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
                 ));
             } else {
                 emit(&format!(
-                    "\n--- {} piping statistics ---",
+                    "\n--- {} pipi statistics ---",
                     cli::visible_host(&targets[0].label)
                 ));
             }
@@ -418,18 +416,22 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
 fn socket_error(e: io::Error) -> String {
     match e.raw_os_error() {
         Some(1 | 13) => format!(
-            "ICMP ping socket not permitted ({e}). Check /proc/sys/net/ipv4/ping_group_range and your group ID; piping never invokes sudo or changes sysctl"
+            "ICMP ping socket not permitted ({e}). Check /proc/sys/net/ipv4/ping_group_range and your group ID; pipi never invokes sudo or changes sysctl"
         ),
         Some(97) => format!("requested IP family is unavailable ({e}); check IPv6 support"),
         _ => format!("cannot open Linux ICMP echo socket: {e}"),
     }
 }
 
+pub(crate) fn interrupted() -> bool {
+    INTERRUPTED.load(Ordering::Relaxed)
+}
+
 /// Executes the complete bounded probe loop; 0 reply / 1 none / 2 reserved for caller errors.
 pub fn run(config: Config) -> Result<i32, String> {
     if config.mode == Mode::Tui && !cfg!(feature = "tui") {
         return Err(
-            "TUI was not built; use cargo build --features tui or 'piping monitor HOST'".into(),
+            "TUI was not built; use cargo build --features tui or 'pipi monitor HOST'".into(),
         );
     }
     let mut targets = if config.mode == Mode::Range {
@@ -487,7 +489,9 @@ pub fn run(config: Config) -> Result<i32, String> {
             event_timeout(&config, &targets[probe.target], probe.seq);
             note_recent(&mut recent, *id, probe.target, false);
             if config.mode == Mode::Range
-                && config.count.is_some_and(|limit| targets[probe.target].sent < limit)
+                && config
+                    .count
+                    .is_some_and(|limit| targets[probe.target].sent < limit)
             {
                 ready.push_back(probe.target);
             }
@@ -509,8 +513,7 @@ pub fn run(config: Config) -> Result<i32, String> {
                     screen.show(
                         &cli::visible_host(&config.target),
                         &history.recent(22, config.ascii),
-                        targets[0].stats.sent,
-                        targets[0].stats.received,
+                        &targets[0].stats,
                     );
                 }
             }
@@ -522,7 +525,12 @@ pub fn run(config: Config) -> Result<i32, String> {
             break;
         }
         let candidate = if now >= next_send && pending.len() < config.jobs {
-            select_target(&targets, &mut ready, config.count, config.mode == Mode::Range)
+            select_target(
+                &targets,
+                &mut ready,
+                config.count,
+                config.mode == Mode::Range,
+            )
         } else {
             None
         };
@@ -570,11 +578,12 @@ pub fn run(config: Config) -> Result<i32, String> {
                     &mut history,
                     &mut recent,
                 );
-                if let Some(idx) = completed
-                    && config.mode == Mode::Range
-                    && config.count.is_some_and(|limit| targets[idx].sent < limit)
-                {
-                    ready.push_back(idx);
+                if let Some(idx) = completed {
+                    if config.mode == Mode::Range
+                        && config.count.is_some_and(|limit| targets[idx].sent < limit)
+                    {
+                        ready.push_back(idx);
+                    }
                 }
             })
             .map_err(|e| format!("receive ICMP: {e}"))?;

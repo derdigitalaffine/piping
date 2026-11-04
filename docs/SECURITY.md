@@ -41,9 +41,17 @@ Das Werkzeug ist für die Diagnose eigener bzw. autorisierter Netze vorgesehen. 
 
 ## Layer-2 Discovery – neue, getrennte Vertrauensgrenze
 
-- `piping discover` ist passiv (RTM_GETNEIGH/NETLINK_ROUTE) und sendet keine Pakete; Kernel-Cache-Zustände können veraltet, leer oder manipuliert sein.
-- Nur `piping discover --active CIDR --interface IFACE` öffnet einen Ethernet-`AF_PACKET`-Raw-Socket. Dies **erfordert** CAP_NET_RAW. Das Programm erhöht Rechte nicht selbst, startet keine Shell, schreibt keine Sysctls und ruft `sudo` nie auf.
+- `pipi discover` ist passiv (RTM_GETNEIGH/NETLINK_ROUTE) und sendet keine Pakete; Kernel-Cache-Zustände können veraltet, leer oder manipuliert sein.
+- Nur `pipi discover --active CIDR --interface IFACE` öffnet einen Ethernet-`AF_PACKET`-Raw-Socket. Dies **erfordert** CAP_NET_RAW. Das Programm erhöht Rechte nicht selbst, startet keine Shell, schreibt keine Sysctls und ruft `sudo` nie auf.
 - Aktive Scans prüfen ein direkt am gewählten Interface angeschlossenes IPv4-Netz in `/proc/net/route`, erlauben maximal 256 Ziel-IPs, höchstens 100 Pakete/s, maximal 5s Empfangsfenster, und schließen eigene Quelladresse aus.
 - Ethernet-/ARP-Reply-Felder, Quell-/Ziel-MAC und solicited-IP werden validiert; ARP bietet **keine** kryptografische Authentifizierung (Spoofing möglich). IPv6-NDP-Discovery bleibt passiv.
 - Netlink-Attribute werden über geprüfte Byte-Slices analysiert, mit maximal 8192 Cache-Einträgen und 65-KiB wiederverwendetem Empfangspuffer. Keine Interpretation unsicherer Netlink-Daten als Terminal-Steuersequenzen.
 - Aktiver Linux-CI-Test nutzt ausschließlich ein temporäres veth-Paar und 198.18.0.0/30. Wenn Host-CAP_NET_ADMIN fehlt, wird **SKIP**, nicht PASS gemeldet.
+
+## MTR-Trace und Neighborhood (M7)
+
+- `pipi trace HOST` sendet höchstens alle 50 ms ein ICMP-Echo (Default 100 ms), höchstens 32 TTL-Hops und maximal 1000 Zyklen bei `-c`; ohne `-c` nur kontrolliert bis `Strg+C`. Keine TCP-/UDP-Portscans und kein Raw-IP-Socket automatisch.
+- IPv4/IPv6 Time Exceeded und Unreachable werden aus dem Linux Error Queue (`IP_RECVERR`/`IPV6_RECVERR`) dekodiert. Probe-Nonce/Token, Sequenz, Ziel-IP und gegebene Quoten werden validiert; sehr kurze ICMP-Zitate mit nur 16-bit-Sequenz bleiben kryptografisch schwächer und können Router-Fehlzuordnungen verursachen. Keine DNS-Auflösung pro Hop.
+- `pipi neighborhood` und `--tui` lesen **automatisch passiv** den Kernel-ARP/NDP-Cache. Die Baumgrafik zeigt nur Interface-Zuordnung und beobachtete IP/MAC; keine erfundene physische Netzwerktopologie. Fehlende/stale Cache-Einträge normal.
+- Nur `pipi neighborhood --scan-local -i IFACE` (oder `--active CIDR -i IFACE`) sendet ARP; `--scan-local` verweigert öffentliche Netze, Masken breiter als /24, mehrdeutige Routen und Netzbereiche außerhalb des direkt angeschlossenen Interface. Maximal 256 Hosts / 20 PPS, kein Auto-Sudo, keine periodischen aktiven Scans oder Privilegänderungen.
+- Weitere FFI-/Packet-Reviews, Kernel-Netns-Testfälle und echte Rust/LINUX-CI sind vor Freigabe offen.

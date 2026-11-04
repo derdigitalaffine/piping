@@ -35,7 +35,7 @@ Widersprüche in PR und `docs/DECISIONS.md` dokumentieren, Sicherheitsinvariante
 ## Technische Invarianten
 
 - Linux-first, stable Rust, `Cargo.lock` im Git; releasefähiger Build mit `cargo build --release --locked`.
-- Einfaches `piping HOST` ohne TUI, ohne Admin-UI, ohne Konfigurationsdatei lauffähig, wenn Netzwerk/Sockets verfügbar.
+- Einfaches `pipi HOST` ohne TUI, ohne Admin-UI, ohne Konfigurationsdatei lauffähig, wenn Netzwerk/Sockets verfügbar.
 - Keine verpflichtende Fullscreen-/Terminal-Abhängigkeit im Core.
 - Keine ungefragten Systemänderungen, kein `sudo`-/`setuid`-Autofix, keine Hardcoded-Secrets.
 - Ping-Echo-Datagram-Socket als rootless Standard; Privileg-/Raw-Pfad nur bewusst, dokumentiert und getestet.
@@ -63,3 +63,7 @@ Ein Issue gilt erst als fertig, wenn Kriterien im Ticket + zugehörige `docs/ACC
 ## M6-Agenten (Issues #20–#22)
 
 **Hotpath/Performance-Agent (#20):** Keine Heap-Allokation pro Echo/Socketevent, faire O(1)-Queue, CPU/RSS/PPS auf gleichem Linux-Runner messen. Grenzwerte bleiben für autorisierte Netze und Loopback. **Layer-2-Agent (#21):** Rootless, passive read-only Netlink ARP/NDP, starke Parser-Validierung, fehlende Cacheeinträge als normal behandeln. **Active-ARP/Security-Agent (#22):** Explizit freigegebenes Interface/CIDR, on-link-Route, kein Auto-Sudo, max 100 PPS/256 Hosts, synthetische Forgery-Tests und veth-only Live-Integration. Bestehende Main-DoD darf nicht als Bestätigung der neuen Module missverstanden werden.
+
+## M7 Rust-Agenten (#25–#27)
+
+Protocol-Agent: IPv4/IPv6 `IP_RECVERR` mit validierten icmp error source/seq/nonce, keine neuen Auto-Rechte. Engine/Graph-Agent: 1 outstanding Trace-Probe, 20 PPS Default, per-Hop-Smoke begrenzt auf 60 Probes; tests mit synthetischen Linux-CMSG-Feldern. UI-Agent: viewport-striktes ASCII/Unicode-Rendering bis 40x12, `Strg+C` Restore. Discovery/Security-Agent: passives ARP/NDP graph standardmäßig, privates `--scan-local` als explizites einseitiges Opt-in. Docs/QA-Agent: Breaking Change `pipi` 0.2.0 dokumentieren, keine Test-Erfolgsbehauptungen bei 0-Step-CI.

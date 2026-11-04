@@ -8,15 +8,15 @@ Linux CI, Rust 1.85 builds, source installation and real IPv4/IPv6 loopback chec
 
 ```sh
 cargo build --release --locked
-./target/release/piping --help
-./target/release/piping -4 -c 3 127.0.0.1
+./target/release/pipi --help
+./target/release/pipi -4 -c 3 127.0.0.1
 ```
 
 Linux rootless installation, when the kernel allows ping datagram sockets:
 
 ```sh
 cargo install --path . --locked
-piping -c 3 127.0.0.1
+pipi -c 3 127.0.0.1
 ```
 
 This project has no crates.io third-party dependencies. It uses a small audited unsafe POSIX socket wrapper (see `src/linux.rs`), which still needs platform-specific review and actual runtime tests.
@@ -25,7 +25,7 @@ This project has no crates.io third-party dependencies. It uses a small audited 
 
 ```sh
 cargo build --release --locked --features tui
-./target/release/piping tui ::1
+./target/release/pipi tui ::1
 ```
 
 ## Packaging

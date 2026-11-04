@@ -1,27 +1,39 @@
 #!/usr/bin/env bash
 # Disposable virtual-only two-host ARP test. Never probe host/public interfaces.
 set -uo pipefail
-binary="./target/release/piping"
+binary="./target/release/pipi"
 if [[ $# -gt 0 ]]; then binary="$1"; fi
 if ! command -v ip >/dev/null 2>&1 || ! command -v sudo >/dev/null 2>&1 || ! sudo -n true 2>/dev/null; then
   echo "SKIP: cannot create isolated veth pair"; exit 77
 fi
-iface="piping-ci0"
-peer="piping-ci1"
-cleanup() { sudo -n ip link del "$iface" 2>/dev/null || true; }
-if ip link show "$iface" >/dev/null 2>&1 || ip link show "$peer" >/dev/null 2>&1; then
-  echo "SKIP: reserved test interface name already exists; do not modify it"
+iface="pipi-ci0"
+peer="pipi-ci1"
+ns="pipi-ci-ns"
+# The peer MUST live in a different Linux network namespace: when both
+# addresses are local, Linux may handle/suppress ARP without peer replies.
+cleanup() {
+  sudo -n ip link del "$iface" 2>/dev/null || true
+  sudo -n ip netns del "$ns" 2>/dev/null || true
+}
+if ip link show "$iface" >/dev/null 2>&1 || ip link show "$peer" >/dev/null 2>&1 \
+  || sudo -n ip netns list | grep -q "^$ns "; then
+  echo "SKIP: test interface/namespace name already exists; never modify it"
   exit 77
 fi
-if ! sudo -n ip link add "$iface" type veth peer name "$peer" 2>/dev/null; then
-  echo "SKIP: kernel/runner denies creating veth"; exit 77
+if ! sudo -n ip netns add "$ns" 2>/dev/null; then
+  echo "SKIP: kernel/runner denies private test network namespaces"; exit 77
 fi
 trap cleanup EXIT
-if ! sudo -n ip addr add 198.18.0.1/30 dev "$iface" \
-  || ! sudo -n ip addr add 198.18.0.2/30 dev "$peer" \
+if ! sudo -n ip link add "$iface" type veth peer name "$peer" 2>/dev/null; then
+  echo "SKIP: kernel/runner denies creating veth pair"; exit 77
+fi
+if ! sudo -n ip link set "$peer" netns "$ns" \
+  || ! sudo -n ip addr add 198.18.0.1/30 dev "$iface" \
+  || ! sudo -n ip netns exec "$ns" ip addr add 198.18.0.2/30 dev "$peer" \
   || ! sudo -n ip link set "$iface" up \
-  || ! sudo -n ip link set "$peer" up; then
-  echo "SKIP: failed to configure isolated veth"; exit 77
+  || ! sudo -n ip netns exec "$ns" ip link set lo up \
+  || ! sudo -n ip netns exec "$ns" ip link set "$peer" up; then
+  echo "SKIP: failed to configure isolated two-namespace veth"; exit 77
 fi
 # The binary itself performs no privilege escalation; sudo is test harness only.
 output=$(sudo -n "$binary" discover --active 198.18.0.0/30 \

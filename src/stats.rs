@@ -23,10 +23,18 @@ pub struct Stats {
 impl Default for Stats {
     fn default() -> Self {
         Self {
-            sent: 0, received: 0, duplicates: 0,
-            min: 0.0, max: 0.0, mean: 0.0, m2: 0.0,
-            prev: None, jitter_sum: 0.0, jitter_pairs: 0,
-            samples: VecDeque::new(), keep_samples: true,
+            sent: 0,
+            received: 0,
+            duplicates: 0,
+            min: 0.0,
+            max: 0.0,
+            mean: 0.0,
+            m2: 0.0,
+            prev: None,
+            jitter_sum: 0.0,
+            jitter_pairs: 0,
+            samples: VecDeque::new(),
+            keep_samples: true,
         }
     }
 }
@@ -34,7 +42,10 @@ impl Default for Stats {
 impl Stats {
     /// Sweeps with many hosts need min/avg/max, not a 2048-sample history per IP.
     pub fn for_sweep() -> Self {
-        Self { keep_samples: false, ..Self::default() }
+        Self {
+            keep_samples: false,
+            ..Self::default()
+        }
     }
 
     pub fn on_send(&mut self) {

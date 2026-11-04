@@ -6,7 +6,6 @@ use crate::neighbor::{self, Neighbor};
 use std::collections::BTreeMap;
 use std::fmt::Write as _;
 use std::io::{self, Write};
-use std::net::IpAddr;
 use std::time::Duration;
 
 #[derive(Clone, Debug)]
@@ -24,8 +23,13 @@ pub struct Options {
 impl Default for Options {
     fn default() -> Self {
         Self {
-            interface: None, family: None, output: Output::Text,
-            max_results: 4096, active: None, max_hosts: 256, pps: 20,
+            interface: None,
+            family: None,
+            output: Output::Text,
+            max_results: 4096,
+            active: None,
+            max_hosts: 256,
+            pps: 20,
             timeout: Duration::from_secs(2),
         }
     }
@@ -33,10 +37,10 @@ impl Default for Options {
 
 pub fn help() -> &'static str {
     concat!(
-        "piping discover — local Layer-2 neighbor discovery (Linux)\n",
+        "pipi discover — local Layer-2 neighbor discovery (Linux)\n",
         "USAGE:\n",
-        "  piping discover [--interface IFACE] [--family 4|6|all]\n",
-        "  piping discover --active CIDR --interface IFACE [--pps N]\n\n",
+        "  pipi discover [--interface IFACE] [--family 4|6|all]\n",
+        "  pipi discover --active CIDR --interface IFACE [--pps N]\n\n",
         "Passive by default: read the kernel's ARP/NDP neighbor cache through\n",
         "RTM_GETNEIGH. No packets or privileges required. Empty caches are normal.\n",
         "Active is opt-in: IPv4 Ethernet ARP probes confined to an on-link\n",
@@ -51,16 +55,18 @@ pub fn help() -> &'static str {
         "  --timeout SEC        Listen after last ARP packet (0.1..5, default 2)\n",
         "  -h, --help           Show this help\n\n",
         "Examples:\n",
-        "  piping discover --interface eth0\n",
-        "  piping discover --family 6 --output jsonl\n",
-        "  piping discover --active 192.168.1.0/24 -i eth0 --pps 20\n",
+        "  pipi discover --interface eth0\n",
+        "  pipi discover --family 6 --output jsonl\n",
+        "  pipi discover --active 192.168.1.0/24 -i eth0 --pps 20\n",
         "Use on networks you administer or have permission to test.\n"
     )
 }
 
 fn arg(args: &[String], pos: &mut usize, flag: &str) -> Result<String, String> {
     *pos += 1;
-    args.get(*pos).cloned().ok_or_else(|| format!("{flag} needs a value"))
+    args.get(*pos)
+        .cloned()
+        .ok_or_else(|| format!("{flag} needs a value"))
 }
 
 pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
@@ -154,18 +160,28 @@ pub fn parse(args: &[String]) -> Result<Option<Options>, String> {
 }
 
 pub fn valid_interface(name: &str) -> bool {
-    !name.is_empty() && name.len() <= 15 && name.bytes().all(|b| {
-        b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.' | b':')
-    })
+    !name.is_empty()
+        && name.len() <= 15
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'_' | b'-' | b'.' | b':'))
 }
 
 fn state_label(state: u16, active: bool) -> &'static str {
-    if active { return "ARP_REPLY"; }
+    if active {
+        return "ARP_REPLY";
+    }
     match state {
-        1 => "INCOMPLETE", 2 => "REACHABLE", 4 => "STALE",
-        8 => "DELAY", 16 => "PROBE", 32 => "FAILED",
-        64 => "NOARP", 128 => "PERMANENT",
-        0 => "NONE", _ => "OTHER",
+        1 => "INCOMPLETE",
+        2 => "REACHABLE",
+        4 => "STALE",
+        8 => "DELAY",
+        16 => "PROBE",
+        32 => "FAILED",
+        64 => "NOARP",
+        128 => "PERMANENT",
+        0 => "NONE",
+        _ => "OTHER",
     }
 }
 
@@ -175,7 +191,9 @@ fn mac_label(bytes: &[u8]) -> String {
     }
     let mut out = String::with_capacity(bytes.len() * 3);
     for (i, b) in bytes.iter().enumerate() {
-        if i != 0 { out.push(':'); }
+        if i != 0 {
+            out.push(':');
+        }
         let _ = write!(&mut out, "{b:02x}");
     }
     out
@@ -190,7 +208,9 @@ fn json_escape(s: &str) -> String {
             '\n' => out.push_str("\\n"),
             '\t' => out.push_str("\\t"),
             '\r' => out.push_str("\\r"),
-            c if c.is_control() => { let _ = write!(&mut out, "\\u{:04x}", c as u32); }
+            c if c.is_control() => {
+                let _ = write!(&mut out, "\\u{:04x}", c as u32);
+            }
             c => out.push(c),
         }
     }
@@ -217,15 +237,26 @@ pub fn run(args: &[String]) -> Result<i32, String> {
         return Ok(0);
     };
     let interfaces = neighbor::interfaces()?;
-    let filter_ifindex = options.interface.as_ref().map(|name| {
-        interfaces.iter().find(|(_, value)| value == &name)
-            .map(|(idx, _)| *idx)
-            .ok_or_else(|| format!("interface {} not found in /sys/class/net", name))
-    }).transpose()?;
+    let filter_ifindex = options
+        .interface
+        .as_ref()
+        .map(|name| {
+            interfaces
+                .iter()
+                .find(|(_, value)| value == &name)
+                .map(|(idx, _)| *idx)
+                .ok_or_else(|| format!("interface {} not found in /sys/class/net", name))
+        })
+        .transpose()?;
     let mut rows = if let Some(ref cidr) = options.active {
-        crate::arp::scan(cidr, options.interface.as_deref().unwrap_or_default(),
-            filter_ifindex.unwrap_or_default(), options.pps,
-            options.timeout, options.max_hosts)?
+        crate::arp::scan(
+            cidr,
+            options.interface.as_deref().unwrap_or_default(),
+            filter_ifindex.unwrap_or_default(),
+            options.pps,
+            options.timeout,
+            options.max_hosts,
+        )?
     } else {
         neighbor::dump()?
     };
@@ -238,7 +269,14 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     let total = rows.len();
     let truncated = total > options.max_results;
     rows.truncate(options.max_results);
-    display(&rows, &interfaces, options.output, total, truncated, options.active.is_some())?;
+    display(
+        &rows,
+        &interfaces,
+        options.output,
+        total,
+        truncated,
+        options.active.is_some(),
+    )?;
     Ok(0)
 }
 
@@ -251,35 +289,58 @@ fn display(
     active: bool,
 ) -> Result<(), String> {
     match output {
-        Output::Text => emit("IP ADDRESS                              INTERFACE         MAC / LINK ADDRESS              STATE")?,
+        Output::Text => emit(
+            "IP ADDRESS                              INTERFACE         MAC / LINK ADDRESS              STATE",
+        )?,
         Output::Csv => emit("ip,interface,mac,state,source")?,
         Output::Jsonl => {}
     }
     for n in neighbors {
-        let name = interfaces.get(&n.ifindex).cloned()
+        let name = interfaces
+            .get(&n.ifindex)
+            .cloned()
             .unwrap_or_else(|| format!("ifindex:{}", n.ifindex));
         let name = name.chars().filter(|c| !c.is_control()).collect::<String>();
         let mac = mac_label(&n.mac);
         let state = state_label(n.state, n.active);
-        let source = if n.active { "active-arp" } else { "kernel-neighbor-cache" };
+        let source = if n.active {
+            "active-arp"
+        } else {
+            "kernel-neighbor-cache"
+        };
         match output {
             Output::Text => emit(&format!("{:<39} {:<17} {:<31} {}", n.ip, name, mac, state))?,
             Output::Jsonl => emit(&format!(
                 "{{\"schema\":1,\"event\":\"neighbor\",\"ip\":\"{}\",\"interface\":\"{}\",\"mac\":\"{}\",\"state\":\"{state}\",\"source\":\"{source}\"}}",
-                n.ip, json_escape(&name), json_escape(&mac)
+                n.ip,
+                json_escape(&name),
+                json_escape(&mac)
             ))?,
             Output::Csv => emit(&format!(
-                "{},{},{},{},{}", csv_escape(&n.ip.to_string()), csv_escape(&name),
-                csv_escape(&mac), csv_escape(state), csv_escape(source)
+                "{},{},{},{},{}",
+                csv_escape(&n.ip.to_string()),
+                csv_escape(&name),
+                csv_escape(&mac),
+                csv_escape(state),
+                csv_escape(source)
             ))?,
         }
     }
     match output {
         Output::Text => emit(&format!(
             "{} neighbor(s) shown, {} total{}; {}",
-            neighbors.len(), total,
-            if truncated { " (truncated by --max-results)" } else { "" },
-            if active { "explicit ARP discovery" } else { "passive kernel cache; may be stale" }
+            neighbors.len(),
+            total,
+            if truncated {
+                " (truncated by --max-results)"
+            } else {
+                ""
+            },
+            if active {
+                "explicit ARP discovery"
+            } else {
+                "passive kernel cache; may be stale"
+            }
         )),
         Output::Jsonl => emit(&format!(
             "{{\"schema\":1,\"event\":\"summary\",\"total\":{total},\"shown\":{},\"truncated\":{truncated}}}",
@@ -309,9 +370,21 @@ mod tests {
     fn active_requires_explicit_interface_and_cidr() {
         assert!(parse(&a(&["--active", "192.0.2.0/24"])).is_err());
         assert!(parse(&a(&["--active", "192.0.2.1", "-i", "eth0"])).is_err());
-        assert!(parse(&a(&["--active", "192.0.2.0/24", "-i", "eth0", "--family", "6"])).is_err());
+        assert!(
+            parse(&a(&[
+                "--active",
+                "192.0.2.0/24",
+                "-i",
+                "eth0",
+                "--family",
+                "6"
+            ]))
+            .is_err()
+        );
         assert!(parse(&a(&["--pps", "40"])).is_err());
-        let config = parse(&a(&["--active", "192.168.1.0/24", "-i", "eth0"])).unwrap().unwrap();
+        let config = parse(&a(&["--active", "192.168.1.0/24", "-i", "eth0"]))
+            .unwrap()
+            .unwrap();
         assert_eq!(config.pps, 20);
     }
 
@@ -321,8 +394,28 @@ mod tests {
         assert!(!valid_interface("x\n"));
         assert!(valid_interface("eth0.2"));
         assert!(parse(&a(&["--max-results", "0"])).is_err());
-        assert!(parse(&a(&["--active", "10.0.0.0/24", "-i", "eth0", "--pps", "101"])).is_err());
-        assert!(parse(&a(&["--active", "10.0.0.0/24", "-i", "eth0", "--max-hosts", "999"])).is_err());
+        assert!(
+            parse(&a(&[
+                "--active",
+                "10.0.0.0/24",
+                "-i",
+                "eth0",
+                "--pps",
+                "101"
+            ]))
+            .is_err()
+        );
+        assert!(
+            parse(&a(&[
+                "--active",
+                "10.0.0.0/24",
+                "-i",
+                "eth0",
+                "--max-hosts",
+                "999"
+            ]))
+            .is_err()
+        );
     }
 
     #[test]

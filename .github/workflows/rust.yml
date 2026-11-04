@@ -29,18 +29,18 @@ jobs:
         run: |
           mkdir -p dist
           cargo build --release --locked --no-default-features
-          tar -czf dist/piping-linux-x86_64-minimal.tar.gz -C target/release piping
+          tar -czf dist/pipi-linux-x86_64-minimal.tar.gz -C target/release pipi
           cargo build --release --locked --all-features
-          tar -czf dist/piping-linux-x86_64-tui.tar.gz -C target/release piping
-          (cd dist && sha256sum piping-linux-*.tar.gz > SHA256SUMS)
-          ./target/release/piping --help
-          ./target/release/piping --version
+          tar -czf dist/pipi-linux-x86_64-tui.tar.gz -C target/release pipi
+          (cd dist && sha256sum pipi-linux-*.tar.gz > SHA256SUMS)
+          ./target/release/pipi --help
+          ./target/release/pipi --version
       # GitHub artifact quota is external and can be exhausted; publish only tagged candidates.
       - uses: actions/upload-artifact@v4
         if: startsWith(github.ref, 'refs/tags/v')
         continue-on-error: true
         with:
-          name: piping-linux-x86_64-candidate
+          name: pipi-linux-x86_64-candidate
           path: dist/
           if-no-files-found: error
           retention-days: 7
@@ -48,21 +48,22 @@ jobs:
         shell: bash
         run: |
           bash -n tests/linux_smoke.sh
+          bash -n tests/trace_neighborhood_smoke.sh
           bash -n tests/benchmark_loopback.sh
           bash -n tests/discovery_smoke.sh
           bash -n tests/discovery_active_veth.sh
           bash -n tests/benchmark_fastpath.sh
           bash -n tests/compare_fastpath.sh
-          CARGO_TARGET_DIR="$RUNNER_TEMP/piping-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/piping-install" --no-default-features
-          "$RUNNER_TEMP/piping-install/bin/piping" --version
-          "$RUNNER_TEMP/piping-install/bin/piping" --help
+          CARGO_TARGET_DIR="$RUNNER_TEMP/pipi-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/pipi-install" --no-default-features
+          "$RUNNER_TEMP/pipi-install/bin/pipi" --version
+          "$RUNNER_TEMP/pipi-install/bin/pipi" --help
       - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
         shell: bash
         run: |
           echo "Runner group and ping policy:"
           id
           cat /proc/sys/net/ipv4/ping_group_range || true
-          # CI-only: this is a disposable hosted runner. The piping binary never changes sysctl.
+          # CI-only: this is a disposable hosted runner. The pipi binary never changes sysctl.
           if command -v sudo >/dev/null && sudo -n true 2>/dev/null; then
             sudo -n sysctl -w net.ipv4.ping_group_range="0 2147483647" || echo "::warning::Cannot enable ping sockets in this runner"
           else
@@ -73,23 +74,34 @@ jobs:
         shell: bash
         run: |
           set +e
-          bash tests/linux_smoke.sh ./target/release/piping
+          bash tests/linux_smoke.sh ./target/release/pipi
           rc=$?
           if [ "$rc" -eq 77 ]; then
             echo "::warning::ICMP socket integration skipped on this runner; production readiness requires an actual host test"
           else
             exit "$rc"
           fi
+      - name: Loopback ICMP trace, Smoke per hop and neighborhood mini-TUI
+        shell: bash
+        run: |
+          set +e
+          bash tests/trace_neighborhood_smoke.sh ./target/release/pipi
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Trace loopback skipped because Linux ping-socket error queue is unavailable"
+          else
+            exit "$rc"
+          fi
       - name: Smoke source-installed CLI under ping-group policy
-        run: "$RUNNER_TEMP/piping-install/bin/piping -4 -c 2 127.0.0.1"
+        run: "$RUNNER_TEMP/pipi-install/bin/pipi -4 -c 2 127.0.0.1"
       - name: Passive Layer-2 ARP/NDP rtnetlink discovery (no root)
         shell: bash
-        run: bash tests/discovery_smoke.sh ./target/release/piping
+        run: bash tests/discovery_smoke.sh ./target/release/pipi
       - name: Active ARP discovery in disposable veth-only test network
         shell: bash
         run: |
           set +e
-          bash tests/discovery_active_veth.sh ./target/release/piping
+          bash tests/discovery_active_veth.sh ./target/release/pipi
           rc=$?
           if [ "$rc" -eq 77 ]; then
             echo "::warning::Active ARP veth test skipped: runner lacks network admin/raw socket capability"
@@ -100,7 +112,7 @@ jobs:
         shell: bash
         run: |
           set +e
-          bash tests/benchmark_fastpath.sh ./target/release/piping
+          bash tests/benchmark_fastpath.sh ./target/release/pipi
           rc=$?
           if [ "$rc" -eq 77 ]; then
             echo "::warning::Fastpath benchmark skipped due to ICMP socket restrictions"
@@ -112,14 +124,14 @@ jobs:
         run: |
           set -e
           git fetch --no-tags origin 1c6176af860660fb3abee11ea4ecbdc865c84142 --depth=1
-          git worktree add --detach "$RUNNER_TEMP/piping-baseline" 1c6176af860660fb3abee11ea4ecbdc865c84142
-          CARGO_TARGET_DIR="$RUNNER_TEMP/piping-baseline-target" cargo build --release --locked --manifest-path "$RUNNER_TEMP/piping-baseline/Cargo.toml"
-          bash tests/compare_fastpath.sh "$RUNNER_TEMP/piping-baseline-target/release/piping" ./target/release/piping
+          git worktree add --detach "$RUNNER_TEMP/pipi-baseline" 1c6176af860660fb3abee11ea4ecbdc865c84142
+          CARGO_TARGET_DIR="$RUNNER_TEMP/pipi-baseline-target" cargo build --release --locked --manifest-path "$RUNNER_TEMP/pipi-baseline/Cargo.toml"
+          bash tests/compare_fastpath.sh "$RUNNER_TEMP/pipi-baseline-target/release/piping" ./target/release/pipi
       - name: Rate cap and CPU/memory loopback benchmark
         shell: bash
         run: |
           set +e
-          bash tests/benchmark_loopback.sh ./target/release/piping
+          bash tests/benchmark_loopback.sh ./target/release/pipi
           rc=$?
           if [ "$rc" -eq 77 ]; then
             echo "::warning::Benchmark skipped because ICMP sockets are unavailable"

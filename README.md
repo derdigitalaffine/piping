@@ -1,34 +1,37 @@
-# piping
+# pipi
 
-**piping** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
+**pipi** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat auf **`main`** – [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19) gemergt.** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben. Die neuesten GitHub-Actions-Jobs starteten nach dem Merge ohne Schritte/Logs und gelten **nicht** als bestandene Prüfung.
+> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.2.0**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die aktuelle GitHub-Actions-Infrastruktur startet keine Jobs; Rust-/Linux-Tests und Produktivreife der neuen Version sind noch nicht nachgewiesen.** Der ältere grüne [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) gilt nur für den vorherigen `piping`-Stand.
 
-## Nächste Entwicklungsstufe: schneller ICMP-Hot-Path und Layer-2 Discovery
-
-Auf dem Branch [`feat/fastpath-l2-discovery`](https://github.com/derdigitalaffine/piping/tree/feat/fastpath-l2-discovery) werden pro Ping wiederverwendbare Paketpuffer, eine O(1)-Range-Queue, weniger Poll-Wakeups und speichersparende Sweep-Statistiken umgesetzt. `piping discover` kann bekannte ARP-/IPv6-NDP-Nachbarn passiv aus Netlink lesen; aktive ARP-Erkennung auf direkt angeschlossenen Netzen ist ausdrücklich opt-in. Details: [Layer-2-Handbuch](docs/DISCOVERY.md). **Neue Benchmarks/Builds sind wegen nicht gestarteter GitHub-Actions-Jobs noch nicht bestätigt.**
+## Neu: Trace / Neighborhood / TUI
 
 ```sh
-piping discover --interface eth0
-piping discover --family 6 --output jsonl
-piping discover --active 192.168.1.0/24 -i eth0 --pps 20
+pipi trace -c 3 --smoke --max-hops 16 127.0.0.1
+pipi trace --tui --smoke 1.1.1.1
+pipi neighborhood                       # passive lokale Netzwerkumgebung
+pipi neighborhood --tui                 # automatisch aktualisierte grafische Ansicht
+pipi neighborhood --scan-local -i eth0  # explizit aktive private ARP-Erkennung
+pipi discover --family 6 --output jsonl
 ```
 
-## CLI-Befehle auf `main`
+**Installation mit TUI:** `cargo install --path . --locked --features tui`. Details zu Grenzen und Privilegien: [Trace + Neighborhood](docs/TRACE_NEIGHBORHOOD.md) und [Discovery](docs/DISCOVERY.md).
+
+## Basisbefehle
 
 ```sh
-piping example.com
-piping -c 4 -i 1 -W 2 1.1.1.1
-piping -4 -n -q 192.0.2.1
-piping -6 -c 3 ::1
-piping fast 1.1.1.1 --pps 20 --count 100
-piping range 192.168.1.0/24 --only-alive
-piping range 192.168.1.10-192.168.1.30 --jobs 16
-piping monitor example.com --window 60 --ascii
-piping tui example.com  # optionales Cargo-Feature 'tui'
+pipi example.com
+pipi -c 4 -i 1 -W 2 1.1.1.1
+pipi -4 -n -q 192.0.2.1
+pipi -6 -c 3 ::1
+pipi fast 1.1.1.1 --pps 20 --count 100
+pipi range 192.168.1.0/24 --only-alive
+pipi range 192.168.1.10-192.168.1.30 --jobs 16
+pipi monitor example.com --window 60 --ascii
+pipi tui example.com  # optionales Cargo-Feature 'tui'
 ```
 
-`piping HOST` ist der einfache Standardmodus; auf Nicht-TTYs wird niemals automatisch eine Fullscreen-Oberfläche gestartet. Für bestehende Scripts ist nur die dokumentierte Untermenge der iputils-Flags beabsichtigt – keine vollständige binäre Kompatibilität.
+`pipi HOST` ist der einfache Standardmodus; auf Nicht-TTYs wird niemals automatisch eine Fullscreen-Oberfläche gestartet. Für bestehende Scripts ist nur die dokumentierte Untermenge der iputils-Flags beabsichtigt – keine vollständige binäre Kompatibilität.
 
 ## Linux-Build und Installation
 
@@ -38,10 +41,10 @@ Benötigt: Linux (zuerst x86_64, dann aarch64), stable Rust/Cargo und ein ICMP-E
 cargo build --release --locked
 cargo test --locked
 cargo install --path . --locked
-./target/release/piping --help
+./target/release/pipi --help
 # Optionale Fullscreen-UI:
 cargo build --release --locked --features tui
-./target/release/piping tui ::1
+./target/release/pipi tui ::1
 ```
 
 DNS-Auflösung wird auf fünf Sekunden begrenzt; JSONL/CSV enthalten UTC-Epoch-Millisekunden. Die CI prüft zusätzlich `cargo install` aus einem unabhängigen Build-Verzeichnis.

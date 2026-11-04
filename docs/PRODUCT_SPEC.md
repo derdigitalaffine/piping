@@ -2,20 +2,20 @@
 
 ## Kernziel
 
-`piping` ist ein Linux-first Rust-ICMP-Echo-Werkzeug, das **ohne Oberfläche als normaler Ping** funktioniert. Drei Erweiterungsmodi: Fast Ping, Range Pong und SmokePing-artiger Konsolen-Monitor. Die Advanced Shell UI (TUI) ist optional.
+`pipi` ist ein Linux-first Rust-ICMP-Echo-Werkzeug, das **ohne Oberfläche als normaler Ping** funktioniert. Drei Erweiterungsmodi: Fast Ping, Range Pong und SmokePing-artiger Konsolen-Monitor. Die Advanced Shell UI (TUI) ist optional.
 
 ## Bedienung (geplanter CLI-Vertrag)
 
 | Modus | Aufruf | Verhalten |
 | --- | --- | --- |
-| Classic | `piping HOST` | sequenzielle Echo-Messung, Standardzeilen und Statistik, bis Ctrl-C |
-| Classic begrenzt | `piping -c 4 -i 1 -W 2 HOST` | vier Probes, Abstand/Timeout in Sekunden |
-| IPv4/IPv6 | `piping -4 HOST` / `piping -6 HOST` | explizite IP-Familie |
-| Fast | `piping fast HOST --pps 20 --count 100` | scheduler-gesteuerte Probes, bounded outstanding |
-| Range Pong | `piping range 192.168.1.0/24` | Ping-Sweep, Zusammenfassung alive/down/RTT |
-| IP-Range | `piping range 192.168.1.10-192.168.1.30` | inklusive IPv4-Endpunkte |
-| Smoke-Text | `piping monitor HOST --window 60` | rollende ASCII/Unicode-Zeitgrafik, Median/Loss/Spread |
-| TUI optional | `piping tui HOST` | optionales Cargo-Feature, nicht für Standardbetrieb nötig |
+| Classic | `pipi HOST` | sequenzielle Echo-Messung, Standardzeilen und Statistik, bis Ctrl-C |
+| Classic begrenzt | `pipi -c 4 -i 1 -W 2 HOST` | vier Probes, Abstand/Timeout in Sekunden |
+| IPv4/IPv6 | `pipi -4 HOST` / `pipi -6 HOST` | explizite IP-Familie |
+| Fast | `pipi fast HOST --pps 20 --count 100` | scheduler-gesteuerte Probes, bounded outstanding |
+| Range Pong | `pipi range 192.168.1.0/24` | Ping-Sweep, Zusammenfassung alive/down/RTT |
+| IP-Range | `pipi range 192.168.1.10-192.168.1.30` | inklusive IPv4-Endpunkte |
+| Smoke-Text | `pipi monitor HOST --window 60` | rollende ASCII/Unicode-Zeitgrafik, Median/Loss/Spread |
+| TUI optional | `pipi tui HOST` | optionales Cargo-Feature, nicht für Standardbetrieb nötig |
 
 Geplante Standardoptionen: `-c/--count`, `-i/--interval`, `-W/--timeout`, `-4`, `-6`, `-n/--numeric`, `-q/--quiet`, `--ttl`, `--size`, `--ascii`, `--no-color`, `--output text|jsonl|csv` (Ausgabeformate P1). Flag-Bedeutungen mit iputils ausdrücklich prüfen; keine implizite vollständige Kompatibilitätsgarantie.
 
