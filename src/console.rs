@@ -7,10 +7,13 @@ use std::ffi::{c_int, c_void};
 use std::io::{self, BufRead, IsTerminal};
 use std::mem::MaybeUninit;
 use std::process::{Child, Command, Stdio};
+use std::sync::atomic::{AtomicU8, Ordering};
 use std::sync::mpsc::{self, Receiver, SyncSender, TryRecvError};
 use std::time::Instant;
 
 const LOG_MAX: usize = 120;
+// Preserve the next character when ESC is followed immediately by ordinary typing.
+static BUFFERED_KEY: AtomicU8 = AtomicU8::new(0);
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Termios {
@@ -111,10 +114,15 @@ fn byte() -> Result<u8, String> {
     }
 }
 fn key(ms: c_int) -> Result<Option<Key>, String> {
-    if !available(ms)? {
-        return Ok(None);
-    }
-    let b = byte()?;
+    let buffered = BUFFERED_KEY.swap(0, Ordering::Relaxed);
+    let b = if buffered != 0 {
+        buffered
+    } else {
+        if !available(ms)? {
+            return Ok(None);
+        }
+        byte()?
+    };
     let k = match b {
         3 => Key::CtrlC,
         9 => Key::Tab,
@@ -127,6 +135,7 @@ fn key(ms: c_int) -> Result<Option<Key>, String> {
             }
             let second = byte()?;
             if second != b'[' && second != b'O' {
+                BUFFERED_KEY.store(second, Ordering::Relaxed);
                 return Ok(Some(Key::Esc));
             }
             if !available(25)? {
