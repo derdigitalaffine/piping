@@ -533,9 +533,12 @@ fn pipe<R: io::Read + Send + 'static>(reader: R, tx: SyncSender<String>) {
             match reader.read_until(b'\n', &mut buf) {
                 Ok(0) | Err(_) => return,
                 Ok(_) => {
+                    // Keep TAB only for the internal, fixed-field per-hop
+                    // protocol. All other control bytes (especially ESC)
+                    // are removed before they reach the terminal renderer.
                     let line = String::from_utf8_lossy(&buf)
                         .chars()
-                        .filter(|c| !c.is_control() && *c != '\u{1b}')
+                        .filter(|c| *c == '\t' || (!c.is_control() && *c != '\u{1b}'))
                         .take(512)
                         .collect::<String>();
                     if tx.send(line).is_err() {
@@ -961,6 +964,20 @@ mod tests {
     fn set(fields: &mut [Field], key: &str, value: &str) {
         fields.iter_mut().find(|f| f.key == key).unwrap().value = value.into();
     }
+    #[test]
+    fn trace_protocol_delimiters_survive_safe_pipe_filter() {
+        let raw = "@pipi-hop\t1\t3\t 1  127.0.0.1\r\n";
+        let filtered: String = raw.chars()
+            .filter(|c| *c == '\t' || (!c.is_control() && *c != '\u{1b}'))
+            .collect();
+        let mut trace = TraceLive::default();
+        assert!(trace.update(&filtered));
+        assert_eq!(trace.cycle, 3);
+        assert_eq!(trace.hops.len(), 1);
+        assert!(!filtered.contains('\r'));
+        assert!(!filtered.contains('\n'));
+    }
+
     #[test]
     fn trace_menu_replaces_hop_instead_of_adding_snapshots() {
         let mut trace = TraceLive::default();
