@@ -76,7 +76,7 @@ Neue Issues [#20](https://github.com/derdigitalaffine/piping/issues/20), [#21](h
 ### Nachzuholende Belege
 
 - [ ] Rust 1.85 + stable fmt, clippy -D warnings, Tests, release/minimal/TUI builds.
-- [ ] 100-PPS-Baseline mit gleicher Hardware und 1000-PPS-Live-Loopback, CPU/RSS/Gesamtlaufzeit. Vergleich nur unter identischen Bedingungen, keine erfundene Beschleunigung.
+- [ ] 1000-PPS-Live-Loopback, CPU/RSS/Gesamtlaufzeit und wiederholter **Same-Runner-Vergleich** der alten Basis `1c6176af...` gegen das optimierte Binary über `tests/compare_fastpath.sh` (3 Läufe je Variante). Ohne die tatsächlichen CI-Ergebnisse keine behauptete Beschleunigung.
 - [ ] Passive ARP/NDP-Netlink-CLI mit leerem Cache und synthetischen fehlerhaften Netlink-Paketen.
 - [ ] Aktive ARP mit isolierten veth-Peers, CAP_NET_RAW, Interface-/Route-Check und gefälschten ARP-Antworten; fehlende CAP_NET_ADMIN im CI explizit SKIP.
 - [ ] Prüfung der zusätzlichen unsafe FFI-Wrapper, Speicher-/Rate-/Timeout-Obergrenzen.

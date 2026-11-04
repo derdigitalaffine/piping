@@ -66,6 +66,7 @@ bash tests/discovery_smoke.sh ./target/release/piping
 # optional, separates Linux CAP_NET_ADMIN from CAP_NET_RAW and uses only a disposable veth pair
 bash tests/discovery_active_veth.sh ./target/release/piping
 bash tests/benchmark_fastpath.sh ./target/release/piping
+bash tests/compare_fastpath.sh ./target/release/piping-v0.1 ./target/release/piping
 ```
 
 Der Performance-Test sendet ausschließlich IPv4-ICMP an `127.0.0.1`, nicht ins öffentliche Netz. Er protokolliert CPU/RSS, er beweist ohne reproduzierbaren Baseline-Vergleich **keinen** Geschwindigkeitsvorsprung. Netlink-Passivmodus braucht keine Raw-Paketsocket-Rechte.
