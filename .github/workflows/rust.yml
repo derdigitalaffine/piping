@@ -1,0 +1,92 @@
+name: Rust Linux build, lint and ICMP loopback
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Compile and run unit/CLI tests
+        run: cargo test --locked --all-features
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy all features
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - name: Release builds (minimal and optional TUI)
+        run: |
+          mkdir -p dist
+          cargo build --release --locked --no-default-features
+          tar -czf dist/piping-linux-x86_64-minimal.tar.gz -C target/release piping
+          cargo build --release --locked --all-features
+          tar -czf dist/piping-linux-x86_64-tui.tar.gz -C target/release piping
+          (cd dist && sha256sum piping-linux-*.tar.gz > SHA256SUMS)
+          ./target/release/piping --help
+          ./target/release/piping --version
+      # GitHub artifact quota is external and can be exhausted; publish only tagged candidates.
+      - uses: actions/upload-artifact@v4
+        if: startsWith(github.ref, 'refs/tags/v')
+        continue-on-error: true
+        with:
+          name: piping-linux-x86_64-candidate
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+      - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
+        shell: bash
+        run: |
+          echo "Runner group and ping policy:"
+          id
+          cat /proc/sys/net/ipv4/ping_group_range || true
+          # CI-only: this is a disposable hosted runner. The piping binary never changes sysctl.
+          if command -v sudo >/dev/null && sudo -n true 2>/dev/null; then
+            sudo -n sysctl -w net.ipv4.ping_group_range="0 2147483647" || echo "::warning::Cannot enable ping sockets in this runner"
+          else
+            echo "::warning::Runner does not permit sysctl changes"
+          fi
+          cat /proc/sys/net/ipv4/ping_group_range || true
+      - name: Real Linux loopback (explicit SKIP if sandbox denies ICMP)
+        shell: bash
+        run: |
+          set +e
+          bash tests/linux_smoke.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::ICMP socket integration skipped on this runner; production readiness requires an actual host test"
+          else
+            exit "$rc"
+          fi
+      - name: Rate cap and CPU/memory loopback benchmark
+        shell: bash
+        run: |
+          set +e
+          bash tests/benchmark_loopback.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Benchmark skipped because ICMP sockets are unavailable"
+          else
+            exit "$rc"
+          fi
+
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: Rust 1.85 minimum version build
+        run: |
+          cargo test --locked --no-default-features
+          cargo build --release --locked --no-default-features

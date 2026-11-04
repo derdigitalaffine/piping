@@ -1,6 +1,6 @@
 # Roadmap und GitHub-Issue-Organisation
 
-Stand: **04.11.2026**. Piping hat derzeit **nur Planung**, keine Rust-Implementierung. Diese Roadmap übernimmt den P0/P1/P2-Ansatz, kritischen Pfad, Go-Live-/DoD-Gates und zentrale Tracking-Organisation von `kostuemwettbewerb`.
+Stand: **04.11.2026**. Rust-Code und Linux-CI sind in [Draft-PR #18](https://github.com/derdigitalaffine/piping/pull/18) implementiert. [QA-Lauf #41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384) besteht inklusive 11 echter Loopback-Szenarien. Produktionsfreigabe ist an die verbleibenden QA-Gates gebunden. Diese Roadmap übernimmt den P0/P1/P2-Ansatz, kritischen Pfad, Go-Live-/DoD-Gates und zentrale Tracking-Organisation von `kostuemwettbewerb`.
 
 ## Prioritäten
 
@@ -31,6 +31,10 @@ Stand: **04.11.2026**. Piping hat derzeit **nur Planung**, keine Rust-Implementi
 - Graph-Agent arbeitet gegen stabile synthetische Mess-Events; keine Abhängigkeit zu optionaler #10.
 - QA/Security überprüft durchgängig; #12 läuft inkrementell, nicht erst am Schluss.
 - Docs-Agent hält Beispiele nach Implementierung aktuell; TUI und Langzeit-Alerts dürfen den kritischen Pfad nicht blockieren.
+
+## CI-geprüfte Umsetzung und Freigabestatus
+
+24 Unit- + 4 CLI-Tests, fmt/clippy, Rust-1.85/MSRV, beide Linux-x86_64-Release-Konfigurationen, 11 Loopback-Tests und ein begrenzter 100-PPS-Benchmark wurden erfolgreich nachgewiesen. Details und offene Restrisiken: [QA_REPORT](QA_REPORT.md). Die folgenden Release-Checkboxen sind konservative Freigabegates, kein Fortschrittszähler.
 
 ## Release-0.1.0-Abnahme
 
