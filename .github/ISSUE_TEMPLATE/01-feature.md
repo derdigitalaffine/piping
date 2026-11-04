@@ -1,12 +1,12 @@
 ---
 name: "Agenten-Aufgabe / Feature"
-about: "Abnahmefähiges Implementierungs-Issue im piping-Projekt"
+about: "Abnahmefähiges Implementierungs-Issue im pipi-Projekt"
 title: "[P0][M?] "
 ---
 
 ## Ziel / Nutzerwirkung
 
-Was soll `piping` danach konkret können?
+Was soll `pipi` danach konkret können?
 
 ## Zuständiger Agent und Priorität
 

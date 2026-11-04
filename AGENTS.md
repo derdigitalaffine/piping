@@ -35,7 +35,7 @@ Widersprüche in PR und `docs/DECISIONS.md` dokumentieren, Sicherheitsinvariante
 ## Technische Invarianten
 
 - Linux-first, stable Rust, `Cargo.lock` im Git; releasefähiger Build mit `cargo build --release --locked`.
-- Einfaches `piping HOST` ohne TUI, ohne Admin-UI, ohne Konfigurationsdatei lauffähig, wenn Netzwerk/Sockets verfügbar.
+- Einfaches `pipi HOST` ohne TUI, ohne Admin-UI, ohne Konfigurationsdatei lauffähig, wenn Netzwerk/Sockets verfügbar.
 - Keine verpflichtende Fullscreen-/Terminal-Abhängigkeit im Core.
 - Keine ungefragten Systemänderungen, kein `sudo`-/`setuid`-Autofix, keine Hardcoded-Secrets.
 - Ping-Echo-Datagram-Socket als rootless Standard; Privileg-/Raw-Pfad nur bewusst, dokumentiert und getestet.

@@ -11,7 +11,7 @@ title: "[BUG] "
 ## Reproduktion
 
 ```sh
-piping ...
+pipi ...
 ```
 
 ## Umgebung
