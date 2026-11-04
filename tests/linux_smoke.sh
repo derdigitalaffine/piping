@@ -92,59 +92,18 @@ assert rows[-1]["received"] == "2", rows
     fail "Closed stdout pipe (exit=$status)"
   fi
 
+  # Interactive terminal path: util-linux script provides a real pseudo-terminal.
   if command -v script >/dev/null 2>&1; then
     tui_pty_output=$(script -q -e -c "$binary tui -4 -c 6 -i 0.25 127.0.0.1" /dev/null 2>&1)
     tui_pty_status=$?
-    if [[ "$tui_pty_status" -eq 0 ]] && [[ "$tui_pty_output" == *
-  tui_status=$?
-  if [[ "$tui_status" -eq 2 ]] && grep -q "needs an interactive terminal" <<< "$tui_output"; then
-    pass "Optional TUI rejects non-interactive stdout"
-  else
-    fail "TUI non-tty guard (exit=$tui_status)"
-    echo "$tui_output"
-  fi
-else
-  echo "SKIP advanced runtime checks because ping sockets were unavailable or basic tests failed"
-  skipped=$((skipped + 5))
-fi
-
-echo "Linux loopback acceptance: failed=$failed skipped=$skipped"
-if [[ "$failed" -ne 0 ]]; then
-  exit 1
-fi
-if [[ "$skipped" -ne 0 ]]; then
-  exit 77
-fi
-exit 0
-\e[?1049h'* ]] && [[ "$tui_pty_output" == *
-  tui_status=$?
-  if [[ "$tui_status" -eq 2 ]] && grep -q "needs an interactive terminal" <<< "$tui_output"; then
-    pass "Optional TUI rejects non-interactive stdout"
-  else
-    fail "TUI non-tty guard (exit=$tui_status)"
-    echo "$tui_output"
-  fi
-else
-  echo "SKIP advanced runtime checks because ping sockets were unavailable or basic tests failed"
-  skipped=$((skipped + 5))
-fi
-
-echo "Linux loopback acceptance: failed=$failed skipped=$skipped"
-if [[ "$failed" -ne 0 ]]; then
-  exit 1
-fi
-if [[ "$skipped" -ne 0 ]]; then
-  exit 77
-fi
-exit 0
-\e[?1049l'* ]]; then
+    if [[ "$tui_pty_status" -eq 0 ]] && printf '%s' "$tui_pty_output" | python3 -c 'import sys; s=sys.stdin.buffer.read(); assert b"\x1b[?1049h" in s and b"\x1b[?1049l" in s'; then
       pass "Optional TUI enters and restores alternate screen in a real pseudo-terminal"
     else
       fail "Optional TUI pseudo-terminal rendering/restore (exit=$tui_pty_status)"
       echo "$tui_pty_output" | tail -c 200
     fi
   else
-    echo "SKIP optional TUI pseudo-terminal check: util-linux 'script' absent"
+    echo "SKIP optional TUI pseudo-terminal check: util-linux script absent"
     skipped=$((skipped + 1))
   fi
 
@@ -158,7 +117,7 @@ exit 0
   fi
 else
   echo "SKIP advanced runtime checks because ping sockets were unavailable or basic tests failed"
-  skipped=$((skipped + 5))
+  skipped=$((skipped + 6))
 fi
 
 echo "Linux loopback acceptance: failed=$failed skipped=$skipped"
