@@ -81,3 +81,31 @@ fn discovery_invalid_flags_fail_without_network_packets() {
         assert_eq!(result.status.code(), Some(2), "{args:?}");
     }
 }
+
+#[test]
+fn trace_and_neighborhood_help_without_sockets() {
+    for command in ["trace", "neighborhood"] {
+        let output = pipi(&[command, "--help"]);
+        assert!(output.status.success(), "{command}: {:?}", output);
+        let text = String::from_utf8(output.stdout).unwrap();
+        assert!(text.contains("pipi "));
+        assert!(text.contains("--tui"));
+    }
+    assert_eq!(pipi(&["trace"]).status.code(), Some(2));
+    assert_eq!(pipi(&["neighborhood", "--watch", "1"]).status.code(), Some(2));
+}
+
+#[test]
+fn trace_and_neighborhood_validate_hard_limits_without_network() {
+    for args in [
+        vec!["trace", "--max-hops", "99", "127.0.0.1"],
+        vec!["trace", "--count", "1001", "127.0.0.1"],
+        vec!["trace", "-W", "nan", "127.0.0.1"],
+        vec!["trace", "-4", "-6", "127.0.0.1"],
+        vec!["neighborhood", "--max-results", "10000"],
+        vec!["neighborhood", "--active", "10.0.0.0/24"],
+        vec!["neighborhood", "--active", "10.0.0.0/24", "-i", "eth0", "--watch", "2"],
+    ] {
+        assert_eq!(pipi(&args).status.code(), Some(2), "{args:?}");
+    }
+}
