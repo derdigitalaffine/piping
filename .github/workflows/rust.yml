@@ -26,10 +26,20 @@ jobs:
         run: cargo clippy --locked --all-targets --all-features -- -D warnings
       - name: Release builds (minimal and optional TUI)
         run: |
+          mkdir -p dist
           cargo build --release --locked --no-default-features
+          tar -czf dist/piping-linux-x86_64-minimal.tar.gz -C target/release piping
           cargo build --release --locked --all-features
+          tar -czf dist/piping-linux-x86_64-tui.tar.gz -C target/release piping
+          (cd dist && sha256sum piping-linux-*.tar.gz > SHA256SUMS)
           ./target/release/piping --help
           ./target/release/piping --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: piping-linux-x86_64-candidate
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
       - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
         shell: bash
         run: |
@@ -54,3 +64,14 @@ jobs:
           else
             exit "$rc"
           fi
+
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.85.0
+      - name: Rust 1.85 minimum version build
+        run: |
+          cargo test --locked --no-default-features
+          cargo build --release --locked --no-default-features
