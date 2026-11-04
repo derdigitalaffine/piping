@@ -308,16 +308,19 @@ where
             "DNS resolution timed out after {:.0} seconds",
             timeout.as_secs_f64()
         ))),
-        Err(RecvTimeoutError::Disconnected) => {
-            Err(CliError("DNS resolver thread terminated unexpectedly".into()))
-        }
+        Err(RecvTimeoutError::Disconnected) => Err(CliError(
+            "DNS resolver thread terminated unexpectedly".into(),
+        )),
     }
 }
 
 pub fn resolve(host: &str, family: Option<bool>) -> Result<SocketAddr, CliError> {
     if let Ok(ip) = host.parse::<IpAddr>() {
         if family.is_some_and(|v6| v6 != ip.is_ipv6()) {
-            return Err(CliError(format!("no matching IP family for {}", visible_host(host))));
+            return Err(CliError(format!(
+                "no matching IP family for {}",
+                visible_host(host)
+            )));
         }
         return Ok(SocketAddr::new(ip, 0));
     }
