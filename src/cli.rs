@@ -348,7 +348,7 @@ pub fn resolve(host: &str, family: Option<bool>) -> Result<SocketAddr, CliError>
 
 pub fn help() -> &'static str {
     concat!(
-        "pipi 0.1.0 — Linux ICMP Echo diagnostics (Rust)\n",
+        "pipi 0.2.0 — Linux ICMP Echo/trace/neighbor diagnostics (Rust)\n",
         "USAGE:\n",
         "  pipi [OPTIONS] HOST                 Classic ping, Ctrl-C for summary\n",
         "  pipi fast [OPTIONS] HOST            Bounded high-frequency ping\n",

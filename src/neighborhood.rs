@@ -3,6 +3,7 @@
 
 use crate::neighbor::{self, Neighbor};
 use std::collections::BTreeMap;
+#[cfg(test)]
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 

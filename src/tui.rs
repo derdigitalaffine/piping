@@ -35,10 +35,9 @@ pub fn dimensions() -> (usize, usize) {
 /// Keep one column free to prevent cursor-wrap and cap output to the visible height.
 fn clip(line: &str, width: usize) -> String {
     let mut output = String::new();
-    for c in line.chars().filter(|c| !c.is_control() && *c != '\u{1b}') {
-        if output.chars().count() >= width.saturating_sub(1) {
-            break;
-        }
+    for c in line.chars().filter(|c| !c.is_control() && *c != '\u{1b}')
+        .take(width.saturating_sub(1))
+    {
         output.push(c);
     }
     output
