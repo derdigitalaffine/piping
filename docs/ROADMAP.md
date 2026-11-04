@@ -10,14 +10,16 @@ Stand: **04.11.2026**. Piping hat derzeit **nur Planung**, keine Rust-Implementi
 
 ## Meilensteine (logische Milestones, keine GitHub-Milestone-Objekte)
 
+[Zentraler Status- und Umsetzungs-Tracker #17](https://github.com/derdigitalaffine/piping/issues/17).
+
 | Phase | Pflicht-Issues | Lieferschwelle |
 | --- | --- | --- |
-| **M0 – Foundation** | [#1](../issues/1), [#2](../issues/2) | Rust-Projekt/CI/CLI/Exitcodes nachweislich baubar |
-| **M1 – Reliable Ping** | [#3](../issues/3), [#4](../issues/4), [#5](../issues/5), [#6](../issues/6) | Rootless-freundliches ICMPv4/v6, korrekte Korrelation und Statistik |
-| **M2 – Advanced Tools** | [#7](../issues/7), [#8](../issues/8) | Fast Ping bounded; Range Pong mit CIDR, Caps, Summary |
-| **M3 – Visualization** | [#9](../issues/9) Pflicht; [#11](../issues/11) P1; [#10](../issues/10) P2 | Smoke-ASCII-Fenster auf stdout; TUI getrennt und optional |
-| **M4 – Release-ready** | [#12](../issues/12), [#13](../issues/13), [#14](../issues/14) Pflicht; [#15](../issues/15) P1 | Linux-Build, QA-Matrix, Sicherheit, Installationshandbuch |
-| **M5 – Later** | [#16](../issues/16) P2 | Langzeit-Logging/Alerts nur nach stabilem MVP |
+| **M0 – Foundation** | [#1](https://github.com/derdigitalaffine/piping/issues/1), [#2](https://github.com/derdigitalaffine/piping/issues/2) | Rust-Projekt/CI/CLI/Exitcodes nachweislich baubar |
+| **M1 – Reliable Ping** | [#3](https://github.com/derdigitalaffine/piping/issues/3), [#4](https://github.com/derdigitalaffine/piping/issues/4), [#5](https://github.com/derdigitalaffine/piping/issues/5), [#6](https://github.com/derdigitalaffine/piping/issues/6) | Rootless-freundliches ICMPv4/v6, korrekte Korrelation und Statistik |
+| **M2 – Advanced Tools** | [#7](https://github.com/derdigitalaffine/piping/issues/7), [#8](https://github.com/derdigitalaffine/piping/issues/8) | Fast Ping bounded; Range Pong mit CIDR, Caps, Summary |
+| **M3 – Visualization** | [#9](https://github.com/derdigitalaffine/piping/issues/9) Pflicht; [#11](https://github.com/derdigitalaffine/piping/issues/11) P1; [#10](https://github.com/derdigitalaffine/piping/issues/10) P2 | Smoke-ASCII-Fenster auf stdout; TUI getrennt und optional |
+| **M4 – Release-ready** | [#12](https://github.com/derdigitalaffine/piping/issues/12), [#13](https://github.com/derdigitalaffine/piping/issues/13), [#14](https://github.com/derdigitalaffine/piping/issues/14) Pflicht; [#15](https://github.com/derdigitalaffine/piping/issues/15) P1 | Linux-Build, QA-Matrix, Sicherheit, Installationshandbuch |
+| **M5 – Later** | [#16](https://github.com/derdigitalaffine/piping/issues/16) P2 | Langzeit-Logging/Alerts nur nach stabilem MVP |
 
 ## Kritischer Pfad und Parallelisierung
 

@@ -45,7 +45,7 @@ Dieses Repository übernimmt die **Arbeitsorganisation** des Schwesterprojekts `
 - [Entwicklung und Prüfbefehle](docs/DEVELOPMENT.md)
 - [Entscheidungen und offene Designfragen](docs/DECISIONS.md)
 
-[GitHub-Issues](https://github.com/derdigitalaffine/piping/issues) enthalten umsetzbare Aufgaben. Alle Implementierungs- und Testkästchen bleiben offen, bis Code und Prüfnachweise vorliegen.
+[GitHub-Issues](https://github.com/derdigitalaffine/piping/issues) enthalten umsetzbare Aufgaben. Der [zentrale v0.1-Tracker #17](https://github.com/derdigitalaffine/piping/issues/17) bündelt den kritischen Pfad und die Release-Abnahme. Alle Implementierungs- und Testkästchen bleiben offen, bis Code und Prüfnachweise vorliegen.
 
 ## Leitplanken
 
