@@ -132,10 +132,10 @@ fn parse_control(
             return None;
         }
         let value = control.get(cursor + header..cursor + len)?;
-        if level == if ipv6 { SOL_IPV6 } else { SOL_IP }
-            && ty == if ipv6 { IPV6_RECVERR } else { IP_RECVERR }
+        if level == (if ipv6 { SOL_IPV6 } else { SOL_IP })
+            && ty == (if ipv6 { IPV6_RECVERR } else { IP_RECVERR })
             && value.len() >= 16
-            && value[4] == if ipv6 { 3 } else { 2 }
+            && value[4] == (if ipv6 { 3 } else { 2 })
         {
             let kind = match (ipv6, value[5]) {
                 (false, 11) | (true, 3) => ErrorKind::Expired,
