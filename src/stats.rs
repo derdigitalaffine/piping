@@ -4,7 +4,7 @@ use std::collections::VecDeque;
 
 const SAMPLE_LIMIT: usize = 2048;
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug)]
 pub struct Stats {
     pub sent: u64,
     pub received: u64,
@@ -17,9 +17,26 @@ pub struct Stats {
     jitter_sum: f64,
     jitter_pairs: u64,
     samples: VecDeque<f64>,
+    keep_samples: bool,
+}
+
+impl Default for Stats {
+    fn default() -> Self {
+        Self {
+            sent: 0, received: 0, duplicates: 0,
+            min: 0.0, max: 0.0, mean: 0.0, m2: 0.0,
+            prev: None, jitter_sum: 0.0, jitter_pairs: 0,
+            samples: VecDeque::new(), keep_samples: true,
+        }
+    }
 }
 
 impl Stats {
+    /// Sweeps with many hosts need min/avg/max, not a 2048-sample history per IP.
+    pub fn for_sweep() -> Self {
+        Self { keep_samples: false, ..Self::default() }
+    }
+
     pub fn on_send(&mut self) {
         self.sent += 1;
     }
@@ -44,10 +61,12 @@ impl Stats {
             self.jitter_pairs += 1;
         }
         self.prev = Some(ms);
-        if self.samples.len() == SAMPLE_LIMIT {
-            self.samples.pop_front();
+        if self.keep_samples {
+            if self.samples.len() == SAMPLE_LIMIT {
+                self.samples.pop_front();
+            }
+            self.samples.push_back(ms);
         }
-        self.samples.push_back(ms);
     }
 
     pub fn loss_percent(&self) -> f64 {
@@ -119,6 +138,18 @@ mod tests {
         assert_eq!(s.jitter(), 1.0);
         assert_eq!(s.percentile(0.5), 2.0);
         assert!((s.percentile(0.95) - 2.9).abs() < 1e-9);
+    }
+
+    #[test]
+    fn range_statistics_never_allocate_percentile_history() {
+        let mut s = Stats::for_sweep();
+        for n in 0..10_000 {
+            s.on_send();
+            s.on_reply(n as f64);
+        }
+        assert_eq!(s.received, 10_000);
+        assert!(s.samples.is_empty());
+        assert!((s.mean - 4_999.5).abs() < 1e-9);
     }
 
     #[test]
