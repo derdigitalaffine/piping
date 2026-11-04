@@ -88,3 +88,7 @@ Neue GitHub-Issues #25–#27: `pipi trace` nutzt Linux `IP_RECVERR` / `MSG_ERRQU
 **Keine positive CI-Behauptung für M7:** Der zuvor bestätigte Run #41807144867 gilt für den historischen Binarynamen `piping` und den v0.1-Code. Die neuen Module, die Umbenennung auf `pipi` und der 0.2.0-Build wurden noch **nicht** mit einer ausführenden Linux-CI abgenommen. GitHub Actions startet weiterhin Jobs mit 0 Schritten (Blocker #24), daher ist weder ein Leak-/FFI-Security-Audit noch ein Linux-Live-Test/Benchmark abgeschlossen.
 
 Offene Gates: `cargo fmt --check`, Rust 1.85, Clippy alle Features, `cargo test`, Source-Installation mit/ohne TUI, Linux-Loopback-Trace v4/v6, künstliche Time-Exceeded/Unreachable-Pakete, volle/kleine Terminalgrößen, aktive ARP nur isoliert unter explizit erlaubter Admin-Testumgebung. Siehe [M7-Handbuch](TRACE_NEIGHBORHOOD.md).
+
+## pipi v0.3 Farb-/Formular-TUI
+
+Die neue v0.3-Version erweitert das im [grünen v0.2-Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991) getestete Linux-Tool um ein Host-loses Menü, neun konfigurierbare Module, einen begrenzten Live-Ausgabebereich, Farbfallback und eine zusätzliche aktive ARP-Bestätigung. Die Prüfung erfolgt mit `tests/tui_console_pty.py` (echtes PTY, NO_COLOR, CLI ohne TTY, Formularnavigation, interaktiver Loopback, Rücksetzen der Terminalattribute) plus Rust-1.85-/Stable-/Clippy-/Fmt-/Netzwerk-Suite. **Der ältere v0.2-Testlauf beweist nicht automatisch die Freigabe von v0.3.**

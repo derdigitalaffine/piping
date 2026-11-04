@@ -57,6 +57,9 @@ jobs:
           CARGO_TARGET_DIR="$RUNNER_TEMP/pipi-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/pipi-install" --no-default-features
           "$RUNNER_TEMP/pipi-install/bin/pipi" --version
           "$RUNNER_TEMP/pipi-install/bin/pipi" --help
+      - name: Interactive color TUI with hostless forms, second ARP confirmation, terminal restore
+        shell: bash
+        run: python3 tests/tui_console_pty.py ./target/release/pipi
       - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
         shell: bash
         run: |

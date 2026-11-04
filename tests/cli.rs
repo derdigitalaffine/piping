@@ -128,3 +128,13 @@ fn trace_and_neighborhood_validate_hard_limits_without_network() {
         assert_eq!(pipi(&args).status.code(), Some(2), "{args:?}");
     }
 }
+
+#[test]
+fn no_host_requires_tui_terminal_or_feature_not_a_silent_scan() {
+    let result = pipi(&[]);
+    assert_eq!(result.status.code(), Some(2));
+    let stdout = String::from_utf8_lossy(&result.stdout);
+    let stderr = String::from_utf8_lossy(&result.stderr);
+    assert!(!stdout.contains("\x1b[?1049h"));
+    assert!(stderr.contains("terminal") || stderr.contains("TTY") || stderr.contains("built"));
+}
