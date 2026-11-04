@@ -1,0 +1,43 @@
+name: Rust Linux build, lint and ICMP loopback
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: rust-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Clippy all features
+        run: cargo clippy --locked --all-targets --all-features -- -D warnings
+      - name: Offline unit and CLI tests
+        run: cargo test --locked --all-features
+      - name: Release builds (minimal and optional TUI)
+        run: |
+          cargo build --release --locked --no-default-features
+          cargo build --release --locked --all-features
+          ./target/release/piping --help
+          ./target/release/piping --version
+      - name: Real Linux loopback (explicit SKIP if sandbox denies ICMP)
+        shell: bash
+        run: |
+          set +e
+          bash tests/linux_smoke.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::ICMP socket integration skipped on this runner; production readiness requires an actual host test"
+          else
+            exit "$rc"
+          fi
