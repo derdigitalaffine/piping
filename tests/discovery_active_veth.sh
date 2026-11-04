@@ -9,11 +9,14 @@ fi
 iface="piping-ci0"
 peer="piping-ci1"
 cleanup() { sudo -n ip link del "$iface" 2>/dev/null || true; }
-trap cleanup EXIT
-cleanup
+if ip link show "$iface" >/dev/null 2>&1 || ip link show "$peer" >/dev/null 2>&1; then
+  echo "SKIP: reserved test interface name already exists; do not modify it"
+  exit 77
+fi
 if ! sudo -n ip link add "$iface" type veth peer name "$peer" 2>/dev/null; then
   echo "SKIP: kernel/runner denies creating veth"; exit 77
 fi
+trap cleanup EXIT
 if ! sudo -n ip addr add 198.18.0.1/30 dev "$iface" \
   || ! sudo -n ip addr add 198.18.0.2/30 dev "$peer" \
   || ! sudo -n ip link set "$iface" up \
