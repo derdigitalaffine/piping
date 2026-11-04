@@ -68,6 +68,17 @@ jobs:
           else
             exit "$rc"
           fi
+      - name: Rate cap and CPU/memory loopback benchmark
+        shell: bash
+        run: |
+          set +e
+          bash tests/benchmark_loopback.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Benchmark skipped because ICMP sockets are unavailable"
+          else
+            exit "$rc"
+          fi
 
   msrv:
     runs-on: ubuntu-latest
