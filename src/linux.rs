@@ -356,7 +356,8 @@ impl SocketSet {
             n += 1;
         }
         // poll is interrupted by SIGINT/SIGTERM; do not wake every 200 ms.
-        let millis = timeout.as_millis().min(60_000).min(c_int::MAX as u128) as c_int;
+        // Round sub-millisecond waits up rather than spinning with poll(0).
+        let millis = timeout.as_micros().div_ceil(1000).min(60_000) as c_int;
         // SAFETY: fds[..n] is initialized and writable until the synchronous call returns.
         let result = unsafe { poll(fds.as_mut_ptr(), n, millis) };
         if result < 0 {
