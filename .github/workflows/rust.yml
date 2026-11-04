@@ -106,6 +106,14 @@ jobs:
           else
             exit "$rc"
           fi
+      - name: Compare old and optimized ICMP on the same runner
+        shell: bash
+        run: |
+          set -e
+          git fetch --no-tags origin 1c6176af860660fb3abee11ea4ecbdc865c84142 --depth=1
+          git worktree add --detach "$RUNNER_TEMP/piping-baseline" 1c6176af860660fb3abee11ea4ecbdc865c84142
+          CARGO_TARGET_DIR="$RUNNER_TEMP/piping-baseline-target" cargo build --release --locked --manifest-path "$RUNNER_TEMP/piping-baseline/Cargo.toml"
+          bash tests/compare_fastpath.sh "$RUNNER_TEMP/piping-baseline-target/release/piping" ./target/release/piping
       - name: Rate cap and CPU/memory loopback benchmark
         shell: bash
         run: |
