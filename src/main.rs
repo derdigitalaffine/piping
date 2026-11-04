@@ -1,7 +1,7 @@
-//! piping: Linux-first ICMP echo diagnostics with deliberately bounded advanced modes.
+//! pipi: Linux-first ICMP echo diagnostics with deliberately bounded advanced modes.
 
 #[cfg(not(target_os = "linux"))]
-compile_error!("piping currently supports Linux only (SOCK_DGRAM ICMP ping sockets)");
+compile_error!("pipi currently supports Linux only (SOCK_DGRAM ICMP ping sockets)");
 
 mod arp;
 mod cli;

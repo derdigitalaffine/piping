@@ -186,7 +186,7 @@ fn parse_reply(frame: &[u8], own_mac: &[u8; 6], own_ip: Ipv4Addr) -> Option<(Ipv
 
 fn arp_error(context: &str, error: io::Error) -> String {
     if matches!(error.raw_os_error(), Some(1 | 13)) {
-        format!("{context}: CAP_NET_RAW required for explicit active ARP ({error}); passive 'piping discover' needs no privileges")
+        format!("{context}: CAP_NET_RAW required for explicit active ARP ({error}); passive 'pipi discover' needs no privileges")
     } else {
         format!("{context}: {error}")
     }

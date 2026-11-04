@@ -33,10 +33,10 @@ impl Default for Options {
 
 pub fn help() -> &'static str {
     concat!(
-        "piping discover — local Layer-2 neighbor discovery (Linux)\n",
+        "pipi discover — local Layer-2 neighbor discovery (Linux)\n",
         "USAGE:\n",
-        "  piping discover [--interface IFACE] [--family 4|6|all]\n",
-        "  piping discover --active CIDR --interface IFACE [--pps N]\n\n",
+        "  pipi discover [--interface IFACE] [--family 4|6|all]\n",
+        "  pipi discover --active CIDR --interface IFACE [--pps N]\n\n",
         "Passive by default: read the kernel's ARP/NDP neighbor cache through\n",
         "RTM_GETNEIGH. No packets or privileges required. Empty caches are normal.\n",
         "Active is opt-in: IPv4 Ethernet ARP probes confined to an on-link\n",
@@ -51,9 +51,9 @@ pub fn help() -> &'static str {
         "  --timeout SEC        Listen after last ARP packet (0.1..5, default 2)\n",
         "  -h, --help           Show this help\n\n",
         "Examples:\n",
-        "  piping discover --interface eth0\n",
-        "  piping discover --family 6 --output jsonl\n",
-        "  piping discover --active 192.168.1.0/24 -i eth0 --pps 20\n",
+        "  pipi discover --interface eth0\n",
+        "  pipi discover --family 6 --output jsonl\n",
+        "  pipi discover --active 192.168.1.0/24 -i eth0 --pps 20\n",
         "Use on networks you administer or have permission to test.\n"
     )
 }

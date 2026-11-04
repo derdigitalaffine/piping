@@ -48,7 +48,7 @@ fn emit(line: &str) {
             // Following common CLI behavior, pipelines ending early are not fatal.
             std::process::exit(0);
         }
-        eprintln!("piping: stdout: {e}");
+        eprintln!("pipi: stdout: {e}");
     }
 }
 
@@ -348,7 +348,7 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
                 ));
             } else {
                 emit(&format!(
-                    "\n--- {} piping statistics ---",
+                    "\n--- {} pipi statistics ---",
                     cli::visible_host(&targets[0].label)
                 ));
             }
@@ -418,7 +418,7 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
 fn socket_error(e: io::Error) -> String {
     match e.raw_os_error() {
         Some(1 | 13) => format!(
-            "ICMP ping socket not permitted ({e}). Check /proc/sys/net/ipv4/ping_group_range and your group ID; piping never invokes sudo or changes sysctl"
+            "ICMP ping socket not permitted ({e}). Check /proc/sys/net/ipv4/ping_group_range and your group ID; pipi never invokes sudo or changes sysctl"
         ),
         Some(97) => format!("requested IP family is unavailable ({e}); check IPv6 support"),
         _ => format!("cannot open Linux ICMP echo socket: {e}"),
@@ -433,7 +433,7 @@ pub(crate) fn interrupted() -> bool {
 pub fn run(config: Config) -> Result<i32, String> {
     if config.mode == Mode::Tui && !cfg!(feature = "tui") {
         return Err(
-            "TUI was not built; use cargo build --features tui or 'piping monitor HOST'".into(),
+            "TUI was not built; use cargo build --features tui or 'pipi monitor HOST'".into(),
         );
     }
     let mut targets = if config.mode == Mode::Range {
