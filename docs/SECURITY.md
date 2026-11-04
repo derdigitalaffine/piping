@@ -55,3 +55,7 @@ Das Werkzeug ist für die Diagnose eigener bzw. autorisierter Netze vorgesehen. 
 - `pipi neighborhood` und `--tui` lesen **automatisch passiv** den Kernel-ARP/NDP-Cache. Die Baumgrafik zeigt nur Interface-Zuordnung und beobachtete IP/MAC; keine erfundene physische Netzwerktopologie. Fehlende/stale Cache-Einträge normal.
 - Nur `pipi neighborhood --scan-local -i IFACE` (oder `--active CIDR -i IFACE`) sendet ARP; `--scan-local` verweigert öffentliche Netze, Masken breiter als /24, mehrdeutige Routen und Netzbereiche außerhalb des direkt angeschlossenen Interface. Maximal 256 Hosts / 20 PPS, kein Auto-Sudo, keine periodischen aktiven Scans oder Privilegänderungen.
 - Weitere FFI-/Packet-Reviews, Kernel-Netns-Testfälle und echte Rust/LINUX-CI sind vor Freigabe offen.
+
+## pipi v0.3 host-loses Control Center
+
+Das Startmenü sendet keinerlei Netzwerkpakete. Aktives ARP benötigt einen expliziten Modus, eine gültige Netzwerkschnittstelle, START und eine zweite Freigabeseite. Der Menüprozess verwendet `Command` auf dem eigenen `pipi`-Executable, keine Shell, und zeigt pro Messung höchstens 120 Ausgabe-Ereignisse. Der Kindprozess wird beim Stoppen beendet. CAP_NET_RAW wird nie automatisch gewährt. Farben erscheinen nur auf unterstützten TTYs; NO_COLOR und maschinenlesbare Formate bleiben ANSI-frei. Linux-Termios und der Alternate Screen werden beim normalen Verlassen und bei per Tastatur empfangenem Strg+C zurückgesetzt. Unabhängige ABI-/Signalprüfungen bleiben wichtig.

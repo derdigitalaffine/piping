@@ -1,6 +1,14 @@
 # Changelog
 
-## [Unreleased] – pipi v0.2.0 development candidate (2026-11-04)
+## [Unreleased] – pipi v0.3.0 colorful terminal control center (2026-11-04)
+
+- `pipi`/`pipi tui` without a host opens an interactive form-driven dashboard on a TTY.
+- Nine configurable modules for Ping, Fast, Range, Smoke, Trace, Neighborhood, Discover and explicit active ARP discovery.
+- Colorized responsive terminal panels, bounded live logs, keyboard navigation and safe terminal restoration.
+- Explicit second confirmation for active ARP scans; no packet transmission on menu opening.
+- Capability-aware NO_COLOR/`--no-color` and plain machine/Pipe output.
+
+## [Previous version] – pipi v0.2.0 (2026-11-04)
 
 - **Breaking CLI rename:** Cargo crate/binary `pipi` instead of `piping`; same GitHub repository `derdigitalaffine/piping`.
 - `pipi trace HOST`: MTR-like ICMPv4/v6 hop statistics from Linux MSG_ERRQUEUE with per-hop bounded SmokePing-style loss/RTT sparklines and optional compact TUI.

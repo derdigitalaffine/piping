@@ -73,3 +73,9 @@ Jede Änderung bekommt ein Issue, einen kurzen Branch/PR, reproduzierbare Tests 
 - [ ] [#24](https://github.com/derdigitalaffine/piping/issues/24): CI-Runner-Blocker; erst mit ausgeführten Schritten sind die neuen Tests/Benchmarks belegt.
 
 **Breaking Change:** Cargo-Paket und ausführbarer Name `pipi` statt `piping`. Repository-URL bleibt gleich. Status ist **Implementierung/QA ausstehend**, nicht veröffentlichte Produktionsfreigabe.
+
+## M8 – pipi 0.3 Color TUI und Menü
+
+- [ ] [#29](https://github.com/derdigitalaffine/piping/issues/29): Hostloser Start, neun Formulare, farbige adaptive Panels und begrenzte Live-Messungen.
+- [ ] PTY-End-to-End mit Farbfallback, Tastatur-Fokus, ESC/q, aktiver Bestätigung und Termios-Restore.
+- [ ] Rust 1.85, rustfmt, clippy, Linux-Loopback und aktiver isolierter ARP-veth-Test.
