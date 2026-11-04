@@ -604,6 +604,106 @@ mod tests {
         assert_eq!(csv_escape("a\"b"), "\"a\"\"b\"");
     }
 
+
+    fn fake_config() -> Config {
+        let args: Vec<String> = ["-q", "-c", "1", "127.0.0.1"]
+            .into_iter()
+            .map(str::to_string)
+            .collect();
+        let cli::Parsed::Run(config) = cli::parse(&args).unwrap() else {
+            panic!("expected run configuration");
+        };
+        config
+    }
+
+    fn fake_incoming(source: IpAddr, seq: u16, nonce: u64, token: u64) -> Received {
+        Received {
+            source,
+            echo: linux::Echo {
+                seq,
+                nonce,
+                token,
+                bytes: 64,
+            },
+        }
+    }
+
+    #[test]
+    fn invalid_source_nonce_and_sequence_are_not_accepted() {
+        let config = fake_config();
+        let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
+        let addr = SocketAddr::new(ip, 0);
+        let mut targets = vec![Target::new("loopback".into(), addr)];
+        targets[0].sent = 1;
+        targets[0].stats.on_send();
+        let mut pending = HashMap::new();
+        let start = Instant::now();
+        pending.insert(42, Pending {
+            target: 0,
+            sent_at: start,
+            deadline: start + Duration::from_secs(1),
+            seq: 42,
+            second: 0,
+        });
+        let mut history = History::new(5);
+        let mut recent = VecDeque::new();
+        on_reply(&config, fake_incoming(ip, 42, 999, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(&config, fake_incoming(ip, 41, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        on_reply(&config, fake_incoming(IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)), 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        assert_eq!(targets[0].stats.received, 0);
+        assert!(pending.contains_key(&42));
+    }
+
+    #[test]
+    fn valid_reply_is_counted_once_and_duplicate_is_tracked() {
+        let config = fake_config();
+        let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
+        let addr = SocketAddr::new(ip, 0);
+        let mut targets = vec![Target::new("loopback".into(), addr)];
+        targets[0].sent = 1;
+        targets[0].stats.on_send();
+        let mut pending = HashMap::new();
+        let start = Instant::now();
+        pending.insert(42, Pending {
+            target: 0,
+            sent_at: start,
+            deadline: start + Duration::from_secs(1),
+            seq: 42,
+            second: 0,
+        });
+        let mut history = History::new(5);
+        let mut recent = VecDeque::new();
+        on_reply(&config, fake_incoming(ip, 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        assert_eq!(targets[0].stats.received, 1);
+        assert!(pending.is_empty());
+        on_reply(&config, fake_incoming(ip, 42, 123, 42), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        assert_eq!(targets[0].stats.received, 1);
+        assert_eq!(targets[0].stats.duplicates, 1);
+    }
+
+    #[test]
+    fn expired_probe_is_never_accepted_late() {
+        let config = fake_config();
+        let ip = IpAddr::V4(Ipv4Addr::LOCALHOST);
+        let mut targets = vec![Target::new("loopback".into(), SocketAddr::new(ip, 0))];
+        targets[0].stats.on_send();
+        let mut pending = HashMap::new();
+        let start = Instant::now();
+        pending.insert(7, Pending {
+            target: 0,
+            sent_at: start - Duration::from_secs(2),
+            deadline: start - Duration::from_secs(1),
+            seq: 7,
+            second: 0,
+        });
+        let mut history = History::new(5);
+        let mut recent = VecDeque::new();
+        on_reply(&config, fake_incoming(ip, 7, 123, 7), 123, &mut pending, &mut targets, &mut history, &mut recent);
+        assert_eq!(targets[0].stats.received, 0);
+        assert!(pending.contains_key(&7));
+    }
+
+
     #[test]
     fn completed_probe_queue_is_capped() {
         let mut q = VecDeque::new();
