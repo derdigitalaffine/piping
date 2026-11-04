@@ -141,6 +141,39 @@ fn connected_routes(routes: &str, iface: &str) -> Vec<(u32, u32)> {
     connected
 }
 
+/// Infer a safe, single local IPv4 network only on explicit --scan-local.
+/// Refuses public/non-RFC1918 addresses and subnets larger than /24 to avoid
+/// surprising probes or overly broad packet bursts.
+fn infer_local_cidr(routes: &str, interface: &str) -> Result<String, String> {
+    let mut candidates = Vec::new();
+    for (network, mask) in connected_routes(routes, interface) {
+        let prefix = mask.leading_ones();
+        if !(24..=31).contains(&prefix)
+            || mask != u32::MAX << (32 - prefix)
+            || !Ipv4Addr::from(network).is_private()
+        {
+            continue;
+        }
+        candidates.push(format!("{}/{prefix}", Ipv4Addr::from(network)));
+    }
+    candidates.sort();
+    candidates.dedup();
+    if candidates.len() == 1 {
+        Ok(candidates.remove(0))
+    } else {
+        Err("cannot safely auto-select one private on-link /24..../31 IPv4 network; use '--active CIDR --interface IFACE' explicitly".into())
+    }
+}
+
+pub fn local_cidr(interface: &str) -> Result<String, String> {
+    if !crate::discovery::valid_interface(interface) {
+        return Err("invalid interface for --scan-local".into());
+    }
+    let routes = std::fs::read_to_string("/proc/net/route")
+        .map_err(|e| format!("cannot inspect local IPv4 routes: {e}"))?;
+    infer_local_cidr(&routes, interface)
+}
+
 fn is_onlink(routes: &[(u32, u32)], target: Ipv4Addr) -> bool {
     let ip = u32::from(target);
     routes.iter().any(|&(network, mask)| ip & mask == network)
@@ -339,6 +372,16 @@ eth1\t0000A8C0\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0\n";
         assert!(!is_onlink(&connected_routes(ROUTES, "eth0"), Ipv4Addr::new(192, 168, 3, 42)));
         assert!(!is_onlink(&connected_routes(ROUTES, "eth1"), Ipv4Addr::new(192, 168, 2, 42)));
         assert!(!is_onlink(&connected_routes(ROUTES, "lo"), Ipv4Addr::new(192, 168, 2, 42)));
+    }
+
+    #[test]
+    fn automatic_local_selection_requires_single_safe_private_link() {
+        assert_eq!(infer_local_cidr(ROUTES, "eth0").unwrap(), "192.168.2.0/24");
+        assert!(infer_local_cidr(ROUTES, "eth1").is_err()); // /16 too broad.
+        assert!(infer_local_cidr(ROUTES, "unknown").is_err());
+        let mut public_routes = ROUTES.to_owned();
+        public_routes.push_str("pub0\t000071CB\t00000000\t0001\t0\t0\t0\t00FFFFFF\t0\t0\t0\n");
+        assert!(infer_local_cidr(&public_routes, "pub0").is_err());
     }
 
     #[test]

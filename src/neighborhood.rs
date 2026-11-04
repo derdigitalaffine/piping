@@ -40,6 +40,7 @@ fn help() -> &'static str {
         "  --watch SEC           Read-only refresh interval (2..120 seconds)\n",
         "  -c, --count N         Refresh count (1..1000), default 1 for snapshot\n",
         "  --active CIDR         Single explicit on-link IPv4 ARP scan; needs --interface\n",
+        "  --scan-local          Opt-in auto-scan of one private /24..../31 on-link CIDR\n",
         "                        CAP_NET_RAW required; max 256 hosts at 20 PPS\n",
         "  -h, --help            Show help\n\n",
         "Default: automatic discovery of local interfaces and their cached neighbors.\n",
@@ -107,10 +108,16 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             "--active" => {
                 i += 1;
                 let cidr = args.get(i).ok_or("--active needs an IPv4 CIDR")?.to_owned();
-                if !cidr.contains('/') {
-                    return Err("--active requires explicit IPv4 CIDR".into());
+                if !cidr.contains('/') || options.active.is_some() {
+                    return Err("--active requires a single explicit IPv4 CIDR".into());
                 }
                 options.active = Some(cidr);
+            }
+            "--scan-local" => {
+                if options.active.is_some() {
+                    return Err("specify only one of --scan-local and --active".into());
+                }
+                options.active = Some("auto".into());
             }
             other => return Err(format!("unknown neighborhood argument: {other}")),
         }
@@ -209,9 +216,14 @@ fn snapshot(options: &Options) -> Result<(Vec<String>, usize), String> {
             .ok_or_else(|| format!("interface {iface} is not present"))
     }).transpose()?;
     let rows = if let Some(ref cidr) = options.active {
+        let interface = options.interface.as_deref().unwrap_or_default();
+        let net = if cidr == "auto" {
+            crate::arp::local_cidr(interface)?
+        } else {
+            cidr.to_owned()
+        };
         crate::arp::scan(
-            cidr, options.interface.as_deref().unwrap_or_default(),
-            ifindex.unwrap_or_default(), 20, Duration::from_secs(2), 256,
+            &net, interface, ifindex.unwrap_or_default(), 20, Duration::from_secs(2), 256,
         )?
     } else {
         neighbor::dump()?
@@ -278,6 +290,9 @@ mod tests {
         assert!(parse(&["--active".into(), "10.0.0.0/24".into()]).is_err());
         assert!(parse(&["--active".into(), "10.0.0.0/24".into(), "-i".into(), "eth0".into(), "--tui".into()]).is_err());
         assert!(parse(&["--watch".into(), "1".into()]).is_err());
+        assert!(parse(&["--scan-local".into()]).is_err());
+        assert!(parse(&["--scan-local".into(), "-i".into(), "eth0".into(), "--tui".into()]).is_err());
+        assert!(parse(&["--scan-local".into(), "-i".into(), "eth0".into()]).unwrap().unwrap().active.is_some());
     }
 
     #[test]
