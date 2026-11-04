@@ -470,7 +470,9 @@ pub fn run(config: Config) -> Result<i32, String> {
     #[cfg(feature = "tui")]
     let screen = if config.mode == Mode::Tui {
         let mut screen = crate::tui::Screen::enter()?;
-        if config.no_color { screen.set_color(false); }
+        if config.no_color {
+            screen.set_color(false);
+        }
         Some(screen)
     } else {
         None

@@ -15,19 +15,30 @@ pub fn configured(allow: bool) {
 }
 
 pub fn style(s: &str) -> String {
-    if !ACTIVE.load(Ordering::Relaxed) { return s.to_owned(); }
+    if !ACTIVE.load(Ordering::Relaxed) {
+        return s.to_owned();
+    }
     // Do not reinterpret network text as control sequences.
     let lower = s.to_ascii_lowercase();
-    let code = if lower.contains("100.0%") || lower.contains("loss high")
-        || lower.contains("failed") || lower.contains("timeout") { "1;31" }
-    else if lower.contains("0.0% packet loss")
-        || lower.contains("reachable") || lower.contains("reply")
-        || lower.contains(" bytes from") { "1;32" }
-    else if lower.contains("loss") || lower.contains("warning")
-        || lower.contains("stale") { "1;33" }
-    else if lower.starts_with("pipi") || lower.starts_with("piping")
-        || lower.starts_with("rtt") { "1;36" }
-    else { "37" };
+    let code = if lower.contains("100.0%")
+        || lower.contains("loss high")
+        || lower.contains("failed")
+        || lower.contains("timeout")
+    {
+        "1;31"
+    } else if lower.contains("0.0% packet loss")
+        || lower.contains("reachable")
+        || lower.contains("reply")
+        || lower.contains(" bytes from")
+    {
+        "1;32"
+    } else if lower.contains("loss") || lower.contains("warning") || lower.contains("stale") {
+        "1;33"
+    } else if lower.starts_with("pipi") || lower.starts_with("piping") || lower.starts_with("rtt") {
+        "1;36"
+    } else {
+        "37"
+    };
     format!("\x1b[{code}m{s}\x1b[0m")
 }
 
