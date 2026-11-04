@@ -48,6 +48,7 @@ jobs:
         shell: bash
         run: |
           bash -n tests/linux_smoke.sh
+          bash -n tests/trace_neighborhood_smoke.sh
           bash -n tests/benchmark_loopback.sh
           bash -n tests/discovery_smoke.sh
           bash -n tests/discovery_active_veth.sh
@@ -77,6 +78,17 @@ jobs:
           rc=$?
           if [ "$rc" -eq 77 ]; then
             echo "::warning::ICMP socket integration skipped on this runner; production readiness requires an actual host test"
+          else
+            exit "$rc"
+          fi
+      - name: Loopback ICMP trace, Smoke per hop and neighborhood mini-TUI
+        shell: bash
+        run: |
+          set +e
+          bash tests/trace_neighborhood_smoke.sh ./target/release/pipi
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Trace loopback skipped because Linux ping-socket error queue is unavailable"
           else
             exit "$rc"
           fi
