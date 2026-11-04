@@ -49,7 +49,7 @@ jobs:
         run: |
           bash -n tests/linux_smoke.sh
           bash -n tests/benchmark_loopback.sh
-          cargo install --locked --path . --root "$RUNNER_TEMP/piping-install" --no-default-features
+          CARGO_TARGET_DIR="$RUNNER_TEMP/piping-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/piping-install" --no-default-features
           "$RUNNER_TEMP/piping-install/bin/piping" --version
           "$RUNNER_TEMP/piping-install/bin/piping" --help
       - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
