@@ -2,7 +2,20 @@
 
 **pipi** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.2.0**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die aktuelle GitHub-Actions-Infrastruktur startet keine Jobs; Rust-/Linux-Tests und Produktivreife der neuen Version sind noch nicht nachgewiesen.** Der ältere grüne [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) gilt nur für den vorherigen `piping`-Stand.
+> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.3.0**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die v0.2-Version bestand echte Linux-Tests im [Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991).** Für den aktuellen v0.3-TUI-Stand gelten neue unabhängige CI-/PTY-Abnahmeprüfungen.
+
+## Neu: pipi 0.3 Color-TUI mit menügeführten Formularen
+
+Nach Installation mit `cargo install --locked --path . --features tui` startet **`pipi` ohne HOST** ein farbiges, grafisch gerahmtes Terminal-Menü. Mit `pipi tui` ohne HOST gelangst du zum selben Dashboard; `pipi tui HOST` bleibt der direkte Live-Ping.
+
+    pipi
+    pipi tui
+    pipi tui 127.0.0.1
+    NO_COLOR=1 pipi
+
+Das Menü enthält Formulare für **Ping, Fast, Range, Smoke, Trace, Neighborhood, Discover, ARP-Scan und lokalen Auto-ARP-Scan**. Mit Pfeilen/Tab navigieren, Werte bearbeiten, F5 bzw. Strg+R starten, Esc zurück und q zum Stoppen. Die laufende Ausgabe bleibt im Bildschirm auf 120 Ereignisse begrenzt. Aktive ARP-Scans brauchen eine zusätzliche Freigabeseite, bevor Pakete gesendet werden. Es gibt **keine automatischen Scans beim Menüstart**.
+
+Farben gibt es nur auf geeigneten Terminals; `NO_COLOR`, `pipi tui --no-color`, Nicht-TTYs und maschinenlesbare Formate bleiben ohne Farbe. [Bedienungsanleitung](docs/TUI_DASHBOARD.md).
 
 ## Neu: Trace / Neighborhood / TUI
 
@@ -31,7 +44,7 @@ pipi monitor example.com --window 60 --ascii
 pipi tui example.com  # optionales Cargo-Feature 'tui'
 ```
 
-`pipi HOST` ist der einfache Standardmodus; auf Nicht-TTYs wird niemals automatisch eine Fullscreen-Oberfläche gestartet. Für bestehende Scripts ist nur die dokumentierte Untermenge der iputils-Flags beabsichtigt – keine vollständige binäre Kompatibilität.
+`pipi HOST` bleibt der direkte Classic-Modus. Nur `pipi` ohne HOST startet mit TUI-Feature und echtem TTY ein Menü; auf Nicht-TTYs wird niemals automatisch eine Fullscreen-Oberfläche gestartet. Für bestehende Scripts ist nur die dokumentierte Untermenge der iputils-Flags beabsichtigt – keine vollständige binäre Kompatibilität.
 
 ## Linux-Build und Installation
 
