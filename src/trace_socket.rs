@@ -2,7 +2,7 @@
 //! Time Exceeded / Destination Unreachable originate in the kernel error queue;
 //! no raw IP socket or root privileges are necessary when ping sockets are allowed.
 
-use crate::linux::{self, PingSocket, Received};
+use crate::linux::{PingSocket, Received};
 use std::ffi::{c_int, c_void};
 use std::io;
 use std::mem::size_of;
@@ -270,14 +270,14 @@ mod tests {
     #[test]
     fn parses_expiry_and_unreachable_error_queue_and_correlation() {
         let mut packet = vec![0x42; 64];
-        linux::write_echo_request(&mut packet, false, 77, 123, 77);
+        crate::linux::write_echo_request(&mut packet, false, 77, 123, 77);
         let err = cmsg(&packet, false, 11).unwrap();
         assert_eq!(err.kind, ErrorKind::Expired);
         assert_eq!(err.router.to_string(), "10.0.0.1");
         assert_eq!(err.id.token, Some(77));
         assert_eq!(cmsg(&packet, false, 3).unwrap().kind, ErrorKind::Unreachable);
         let mut v6 = vec![0x42; 64];
-        linux::write_echo_request(&mut v6, true, 9, 123, 9);
+        crate::linux::write_echo_request(&mut v6, true, 9, 123, 9);
         assert_eq!(cmsg(&v6, true, 3).unwrap().router, IpAddr::V6(Ipv6Addr::LOCALHOST));
         assert_eq!(cmsg(&v6, true, 1).unwrap().kind, ErrorKind::Unreachable);
     }
@@ -285,7 +285,7 @@ mod tests {
     #[test]
     fn accepts_payload_only_and_rejects_malformed_cmsg() {
         let mut packet = vec![0x42; 64];
-        linux::write_echo_request(&mut packet, false, 42, 15, 42);
+        crate::linux::write_echo_request(&mut packet, false, 42, 15, 42);
         assert_eq!(cmsg(&packet[8..], false, 11).unwrap().id.token, Some(42));
         assert_eq!(cmsg(&packet[..8], false, 11).unwrap().id.seq, 42);
         assert!(parse_control(&[0; 5], &packet, IpAddr::V4(Ipv4Addr::LOCALHOST), false).is_none());

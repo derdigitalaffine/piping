@@ -513,8 +513,7 @@ pub fn run(config: Config) -> Result<i32, String> {
                     screen.show(
                         &cli::visible_host(&config.target),
                         &history.recent(22, config.ascii),
-                        targets[0].stats.sent,
-                        targets[0].stats.received,
+                        &targets[0].stats,
                     );
                 }
             }

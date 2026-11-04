@@ -21,7 +21,7 @@ unsafe extern "C" {
 
 pub struct Screen;
 
-fn size() -> (usize, usize) {
+pub fn dimensions() -> (usize, usize) {
     let mut ws = WinSize::default();
     // SAFETY: Linux TIOCGWINSZ reads a 4 x u16 initialized writable struct.
     if unsafe { ioctl(1, TIOCGWINSZ, &mut ws) } == 0 && ws.col > 0 && ws.row > 0 {
@@ -72,24 +72,34 @@ impl Screen {
     }
 
     pub fn show_lines(&self, title: &str, rows: &[String], footer: &str) {
-        let (width, height) = size();
+        let (width, height) = dimensions();
         let data = frame(title, rows, footer, width, height);
         print!("\x1b[H\x1b[2J{data}");
         let _ = io::stdout().flush();
     }
 
     /// Keep the existing ping TUI call site, but bound it to the terminal viewport.
-    pub fn show(&self, label: &str, graph: &str, sent: u64, received: u64) {
+    pub fn show(&self, label: &str, graph: &str, stats: &crate::stats::Stats) {
+        let sent = stats.sent;
+        let received = stats.received;
         let loss = if sent == 0 { 0.0 } else {
             100.0 * sent.saturating_sub(received) as f64 / sent as f64
         };
         let (width, height) = size();
         let graph_lines: Vec<_> = graph.lines().map(str::to_owned).collect();
-        let visible = height.saturating_sub(4);
+        let visible = height.saturating_sub(5);
         let mut rows = vec![format!(
             "Sent {:>6}  Rx {:>6}  Loss {:>5.1}%  |  last {} graph buckets",
             sent, received, loss, graph_lines.len()
         )];
+        rows.push(if received == 0 {
+            "RTT waiting for first valid reply".to_owned()
+        } else {
+            format!(
+                "RTT min {:.2}  avg {:.2}  max {:.2}  p95 {:.2}  jitter {:.2} ms",
+                stats.min, stats.mean, stats.max, stats.percentile(0.95), stats.jitter()
+            )
+        });
         rows.push("RTT distribution (older -> newer):".to_owned());
         rows.extend(graph_lines.iter().skip(graph_lines.len().saturating_sub(visible)).cloned());
         let data = frame(

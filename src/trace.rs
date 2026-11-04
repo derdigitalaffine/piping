@@ -201,6 +201,24 @@ fn probe(
 
 fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<String> {
     let mut out = Vec::with_capacity(hops.len() + 1);
+    if width < 72 {
+        out.push("HOP IP           LOSS  LAST  SMOKE".to_owned());
+        for (i, hop) in hops.iter().enumerate() {
+            let addr = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
+            let addr: String = addr.chars().take(11).collect();
+            let last = hop.recent.back().copied().flatten()
+                .map_or_else(|| "-".to_owned(), |v| format!("{v:.1}"));
+            let prefix = format!(
+                "{:>2}  {:<11} {:>4.0}% {:>6}",
+                i + 1, addr, hop.stats.loss_percent(), last
+            );
+            let budget = width.saturating_sub(prefix.chars().count() + 2);
+            out.push(format!("{prefix} {}", if smoke {
+                graph::sparkline(&hop.recent, budget, ascii)
+            } else { String::new() }));
+        }
+        return out;
+    }
     if smoke {
         out.push("HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST  SMOKE".into());
     } else {
@@ -293,7 +311,8 @@ pub fn run(args: &[String]) -> Result<i32, String> {
             };
             #[cfg(feature = "tui")]
             if let Some(screen) = screen.as_ref() {
-                let rows = render_rows(&hops[..usize::from(ttl)], true, options.ascii, 88);
+                let width = crate::tui::dimensions().0;
+                let rows = render_rows(&hops[..usize::from(ttl)], true, options.ascii, width);
                 screen.show_lines(
                     &format!("pipi TRACE {}  | cycle {}  | hop {}/{}",
                         cli::visible_host(&options.target), cycle, ttl, options.hops),
