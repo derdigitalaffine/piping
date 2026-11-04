@@ -224,7 +224,7 @@ fn csv_escape(s: &str) -> String {
 fn emit(text: &str) -> Result<(), String> {
     let stdout = io::stdout();
     let mut lock = stdout.lock();
-    match writeln!(lock, "{text}") {
+    match writeln!(lock, "{}", crate::colour::style(text)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == io::ErrorKind::BrokenPipe => Ok(()),
         Err(e) => Err(format!("stdout: {e}")),
@@ -236,6 +236,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
         print!("{}", help());
         return Ok(0);
     };
+    crate::colour::configured(options.output == Output::Text);
     let interfaces = neighbor::interfaces()?;
     let filter_ifindex = options
         .interface

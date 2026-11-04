@@ -299,6 +299,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     if options.tui && !cfg!(feature = "tui") {
         return Err("neighborhood --tui requires cargo install --features tui".into());
     }
+    crate::colour::configured(!options.tui);
     crate::engine::install_signals();
     #[cfg(feature = "tui")]
     let screen = if options.tui {

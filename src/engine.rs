@@ -42,7 +42,8 @@ pub(crate) fn entropy_nonce() -> Result<u64, String> {
 pub(crate) fn emit(line: &str) {
     let stdout = io::stdout();
     let mut lock = stdout.lock();
-    let result = writeln!(lock, "{line}").and_then(|_| lock.flush());
+    let rendered = crate::colour::style(line);
+    let result = writeln!(lock, "{rendered}").and_then(|_| lock.flush());
     if let Err(e) = result {
         if e.kind() == io::ErrorKind::BrokenPipe {
             // Following common CLI behavior, pipelines ending early are not fatal.
@@ -85,7 +86,7 @@ fn init_output(config: &Config, targets: &[Target]) {
         Output::Text => {
             if config.mode == Mode::Range {
                 emit(&format!(
-                    "PIPING RANGE {}: {} ICMP targets, {} probes each, {:.1} PPS cap, {} jobs",
+                    "PIPI RANGE {}: {} ICMP targets, {} probes each, {:.1} PPS cap, {} jobs",
                     cli::visible_host(&config.target),
                     targets.len(),
                     config.count.unwrap_or(1),
@@ -100,7 +101,7 @@ fn init_output(config: &Config, targets: &[Target]) {
                     first.label.clone()
                 };
                 emit(&format!(
-                    "PIPING {name} ({}): {} data bytes, interval {:.3}s, timeout {:.3}s",
+                    "PIPI {name} ({}): {} data bytes, interval {:.3}s, timeout {:.3}s",
                     first.addr.ip(),
                     config.size,
                     config.interval.as_secs_f64(),
@@ -444,7 +445,7 @@ pub fn run(config: Config) -> Result<i32, String> {
         vec![Target::new(cli::visible_host(&config.target), addr)]
     };
     // Use otherwise informational config options without altering classic text output.
-    let _colour_enabled = !config.no_color && std::env::var_os("NO_COLOR").is_none();
+    crate::colour::configured(config.output == Output::Text && !config.no_color);
     let nonce = entropy_nonce()?;
     let addrs: Vec<_> = targets.iter().map(|target| target.addr).collect();
     let sockets = SocketSet::for_targets(&addrs, config.ttl).map_err(socket_error)?;

@@ -5,6 +5,7 @@ compile_error!("pipi currently supports Linux only (SOCK_DGRAM ICMP ping sockets
 
 mod arp;
 mod cli;
+mod colour;
 mod discovery;
 mod engine;
 mod graph;

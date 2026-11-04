@@ -360,6 +360,7 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     if options.tui && !cfg!(feature = "tui") {
         return Err("trace --tui requires 'cargo install --features tui'".into());
     }
+    crate::colour::configured(!options.tui);
     let target = cli::resolve(&options.target, options.family).map_err(|e| e.to_string())?;
     let sock = TraceSocket::new(target.is_ipv6())?;
     crate::engine::install_signals();
