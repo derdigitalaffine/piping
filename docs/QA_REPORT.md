@@ -92,3 +92,11 @@ Offene Gates: `cargo fmt --check`, Rust 1.85, Clippy alle Features, `cargo test`
 ## pipi v0.3 Farb-/Formular-TUI
 
 Die neue v0.3-Version erweitert das im [grünen v0.2-Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991) getestete Linux-Tool um ein Host-loses Menü, neun konfigurierbare Module, einen begrenzten Live-Ausgabebereich, Farbfallback und eine zusätzliche aktive ARP-Bestätigung. Die Prüfung erfolgt mit `tests/tui_console_pty.py` (echtes PTY, NO_COLOR, CLI ohne TTY, Formularnavigation, interaktiver Loopback, Rücksetzen der Terminalattribute) plus Rust-1.85-/Stable-/Clippy-/Fmt-/Netzwerk-Suite. **Der ältere v0.2-Testlauf beweist nicht automatisch die Freigabe von v0.3.**
+
+## MTR Live In-place v0.3.1 – bestätigte Linux-Abnahme (04.11.2026)
+
+**Grüner CI-Lauf:** [#41835252193](https://github.com/derdigitalaffine/piping/actions/runs/41835252193), finaler Quell-Commit `38bca04d9086df88c6f679d7cfd97fa6565f5cd8`. Beide Jobs `rust` und `msrv` erfolgreich: 67 Rust-Unit-Tests, 9 CLI-Tests, Rust 1.85, rustfmt, Clippy ohne Warnungen, Release-Builds mit/ohne TUI, Linux-Loopback, echte MTR- und Menü-PTY-Tests, passives ARP/NDP, aktives ARP in isoliertem veth-Netz sowie CPU-/Rate-Benchmarks.
+
+**In-place nachgewiesen:** Im echten Pseudo-Terminal wiederholt `pipi trace --tui -c 4 ...` über mehrere Probes **keine** Vollbildlöschung; alle zusätzlichen Updates verwenden Cursorposition und einzelne Zeilenlöschung. Der Menüpunkt TRACE zeigte eine einzelne persistente Hop-Tabelle mit fortlaufender Aktualisierung, statt jede Zyklustabelle anzuhängen. Unit-Tests decken stabile Hop-Indizes, Hop-Zustand über Zyklusgrenzen, Resize-Reinitialisierung und den zeilenbasierten Diff-Renderer ab.
+
+**Grenzen:** Die Linux-Kernelberechtigungen und ICMP-Zitate können zwischen echten Routern variieren. Der unabhängige unsafe/FFI-Security-Review und isolierte geroutete Mehr-Hop-Tests bleiben separate Release-Gates.

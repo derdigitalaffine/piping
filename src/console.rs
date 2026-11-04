@@ -421,6 +421,7 @@ fn arguments(mode: Mode, fields: &[Field]) -> Result<Vec<String>, String> {
         Mode::Trace => {
             args.insert(0, "trace".into());
             args.push("--smoke".into());
+            args.push("--live-rows".into());
             for (k, v) in [
                 ("count", "-c"),
                 ("hops", "--max-hops"),
@@ -482,6 +483,38 @@ fn arguments(mode: Mode, fields: &[Field]) -> Result<Vec<String>, String> {
     }
     Ok(args)
 }
+/// A bounded MTR table keyed by hop number, not a scrolling sequence of full
+/// snapshots. Each TTL update overwrites its previous row, just like mtr.
+#[derive(Default)]
+struct TraceLive {
+    cycle: u32,
+    hops: Vec<String>,
+}
+
+impl TraceLive {
+    fn update(&mut self, line: &str) -> bool {
+        let Some(payload) = line.strip_prefix("@pipi-hop\t") else {
+            return false;
+        };
+        let mut parts = payload.splitn(3, '\t');
+        let (Some(ttl), Some(cycle), Some(row)) = (parts.next(), parts.next(), parts.next()) else {
+            return false;
+        };
+        let (Ok(ttl), Ok(cycle)) = (ttl.parse::<usize>(), cycle.parse::<u32>()) else {
+            return false;
+        };
+        if !(1..=32).contains(&ttl) || cycle == 0 || row.len() > 512 {
+            return false;
+        }
+        self.cycle = cycle;
+        if self.hops.len() < ttl {
+            self.hops.resize(ttl, " ·  probing ...".to_owned());
+        }
+        self.hops[ttl - 1] = row.to_owned();
+        true
+    }
+}
+
 struct Running {
     child: Child,
     rx: Receiver<String>,
@@ -490,6 +523,7 @@ struct Running {
     started: Instant,
     finished: Option<i32>,
     cmd: Vec<String>,
+    trace: Option<TraceLive>,
 }
 fn pipe<R: io::Read + Send + 'static>(reader: R, tx: SyncSender<String>) {
     std::thread::spawn(move || {
@@ -499,9 +533,12 @@ fn pipe<R: io::Read + Send + 'static>(reader: R, tx: SyncSender<String>) {
             match reader.read_until(b'\n', &mut buf) {
                 Ok(0) | Err(_) => return,
                 Ok(_) => {
+                    // Keep TAB only for the internal, fixed-field per-hop
+                    // protocol. All other control bytes (especially ESC)
+                    // are removed before they reach the terminal renderer.
                     let line = String::from_utf8_lossy(&buf)
                         .chars()
-                        .filter(|c| !c.is_control() && *c != '\u{1b}')
+                        .filter(|c| *c == '\t' || (!c.is_control() && *c != '\u{1b}'))
                         .take(512)
                         .collect::<String>();
                     if tx.send(line).is_err() {
@@ -514,6 +551,13 @@ fn pipe<R: io::Read + Send + 'static>(reader: R, tx: SyncSender<String>) {
 }
 impl Running {
     fn spawn(args: Vec<String>) -> Result<Self, String> {
+        let trace = if args.first().is_some_and(|arg| arg == "trace")
+            && args.iter().any(|arg| arg == "--live-rows")
+        {
+            Some(TraceLive::default())
+        } else {
+            None
+        };
         let exe = std::env::current_exe().map_err(|e| format!("binary path: {e}"))?;
         let mut child = Command::new(exe)
             .args(&args)
@@ -537,6 +581,7 @@ impl Running {
             started: Instant::now(),
             finished: None,
             cmd: args,
+            trace,
         })
     }
     fn update(&mut self) {
@@ -544,6 +589,9 @@ impl Running {
             match self.rx.try_recv() {
                 Ok(line) => {
                     self.total += 1;
+                    if self.trace.as_mut().is_some_and(|trace| trace.update(&line)) {
+                        continue; // In-place MTR update: do not append to the log.
+                    }
                     if self.lines.len() == LOG_MAX {
                         self.lines.pop_front();
                     }
@@ -732,7 +780,11 @@ impl Dashboard {
                 "Enter/Y = send ARP | Esc/N = cancel (default no scan)".into(),
             ),
             Page::Live => (
-                format!("pipi / {} / LIVE", self.mode.name()),
+                if let Some(trace) = self.running.as_ref().and_then(|run| run.trace.as_ref()) {
+                    format!("pipi / TRACE / CYCLE {} / LIVE", trace.cycle.max(1))
+                } else {
+                    format!("pipi / {} / LIVE", self.mode.name())
+                },
                 "q/Esc stop + return | Enter return when finished".into(),
             ),
         };
@@ -824,26 +876,43 @@ impl Dashboard {
                         Some(_) => "COMPLETE / CHECK RESULTS",
                         None => "RUNNING",
                     };
-                    rows.push(format!(
-                        "STATE {} | {}s | {} events",
-                        state,
-                        run.started.elapsed().as_secs(),
-                        run.total
-                    ));
-                    rows.push(format!(
-                        "COMMAND pipi {}",
-                        clip(&run.cmd.join(" "), w.saturating_sub(18))
-                    ));
-                    rows.push("LIVE TELEMETRY / MOST RECENT BELOW".into());
-                    let visible = h.saturating_sub(10).max(1);
-                    rows.extend(
-                        run.lines
-                            .iter()
-                            .skip(run.lines.len().saturating_sub(visible))
-                            .cloned(),
-                    );
-                    if run.finished.is_some() {
-                        rows.push("FINISHED / Enter to configure again".into());
+                    if let Some(trace) = run.trace.as_ref() {
+                        // Stable, MTR-style hop grid. Earlier hops remain in place
+                        // even while later ones are being probed in the next cycle.
+                        rows.push(if w < 61 {
+                            "HOP ADDRESS     LOSS AVG  SMOKE".into()
+                        } else {
+                            "HOP ADDRESS                LOSS  SENT  LAST   AVG  SMOKE".into()
+                        });
+                        rows.extend(trace.hops.iter().cloned());
+                        if run.finished.is_some() {
+                            rows.push(format!("STATE {state} | {} probes", run.total));
+                        }
+                        for line in run.lines.iter().rev().take(2).rev() {
+                            rows.push(format!("NOTE {line}"));
+                        }
+                    } else {
+                        rows.push(format!(
+                            "STATE {} | {}s | {} events",
+                            state,
+                            run.started.elapsed().as_secs(),
+                            run.total
+                        ));
+                        rows.push(format!(
+                            "COMMAND pipi {}",
+                            clip(&run.cmd.join(" "), w.saturating_sub(18))
+                        ));
+                        rows.push("LIVE TELEMETRY / MOST RECENT BELOW".into());
+                        let visible = h.saturating_sub(10).max(1);
+                        rows.extend(
+                            run.lines
+                                .iter()
+                                .skip(run.lines.len().saturating_sub(visible))
+                                .cloned(),
+                        );
+                        if run.finished.is_some() {
+                            rows.push("FINISHED / Enter to configure again".into());
+                        }
                     }
                 }
             }
@@ -895,6 +964,37 @@ mod tests {
     fn set(fields: &mut [Field], key: &str, value: &str) {
         fields.iter_mut().find(|f| f.key == key).unwrap().value = value.into();
     }
+    #[test]
+    fn trace_protocol_delimiters_survive_safe_pipe_filter() {
+        let raw = "@pipi-hop\t1\t3\t 1  127.0.0.1\r\n";
+        let filtered: String = raw
+            .chars()
+            .filter(|c| *c == '\t' || (!c.is_control() && *c != '\u{1b}'))
+            .collect();
+        let mut trace = TraceLive::default();
+        assert!(trace.update(&filtered));
+        assert_eq!(trace.cycle, 3);
+        assert_eq!(trace.hops.len(), 1);
+        assert!(!filtered.contains('\r'));
+        assert!(!filtered.contains('\n'));
+    }
+
+    #[test]
+    fn trace_menu_replaces_hop_instead_of_adding_snapshots() {
+        let mut trace = TraceLive::default();
+        assert!(trace.update("@pipi-hop\t1\t1\t 1  10.0.0.1   0%"));
+        assert_eq!(trace.hops.len(), 1);
+        assert!(trace.update("@pipi-hop\t2\t1\t 2  10.0.0.2  20%"));
+        assert_eq!(trace.hops.len(), 2);
+        assert!(trace.update("@pipi-hop\t1\t2\t 1  10.0.0.1  50%"));
+        assert_eq!(trace.hops.len(), 2);
+        assert!(trace.hops[0].contains("50%"));
+        assert!(trace.hops[1].contains("20%"));
+        assert_eq!(trace.cycle, 2);
+        assert!(!trace.update("@pipi-hop\t33\t2\t invalid"));
+        assert!(!trace.update("unrelated text"));
+    }
+
     #[test]
     fn all_modes_are_in_menu_and_passive_on_open() {
         let app = Dashboard::default();

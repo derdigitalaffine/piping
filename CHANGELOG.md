@@ -1,6 +1,14 @@
 # Changelog
 
-## [Unreleased] – pipi v0.3.0 colorful terminal control center (2026-11-04)
+## [Unreleased] – pipi v0.3.1 MTR in-place live display (2026-11-04)
+
+- MTR trace renders a stable live hop table. Only changed terminal rows are overwritten, without clearing the whole terminal on each new data point.
+- Per-hop loss, RTT and Smoke persist across trace cycles, including the first hops when a new cycle starts.
+- Hostless menu TRACE uses bounded per-hop events instead of appending full result tables.
+- Interactive `pipi trace HOST` defaults to the TUI if built with feature `tui`; `--text` retains the classic per-cycle output, and pipes remain plain text.
+- Terminal PTY, redraw-diff and indexed-hop regression tests.
+
+## [Previous development candidate] – pipi v0.3.0 colorful terminal control center (2026-11-04)
 
 - `pipi`/`pipi tui` without a host opens an interactive form-driven dashboard on a TTY.
 - Nine configurable modules for Ping, Fast, Range, Smoke, Trace, Neighborhood, Discover and explicit active ARP discovery.

@@ -80,3 +80,7 @@ bash tests/trace_neighborhood_smoke.sh ./target/release/pipi
 ```
 
 Für echte Linux-ICMP-Tests sind passende Ping-Socket-Berechtigungen erforderlich. Bei fehlender Berechtigung wird **SKIP** statt „bestanden“ angegeben. Neue Linux-FFI und grafische Pfade erfordern vor einer offiziellen Freigabe echte CI-Ausführung und Security-Review.
+
+## v0.3.1: Live-MTR ohne fortlaufende Neuausgabe
+
+Auf einem interaktiven Linux-Terminal mit TUI-Feature wird `pipi trace HOST` wie `pipi trace --tui HOST` als **persistente Hop-Tabelle** dargestellt. Jede abgeschlossene Probe aktualisiert ihre eigene Zeile (Verlust, Anzahl, RTT, Smoke), ältere Hops bleiben über den Beginn eines neuen Zyklus erhalten. Das Dashboard wird nur initial oder beim Resize vollständig neu aufgebaut. Im grafischen `pipi`-Menü funktioniert TRACE genauso. Für klassisches Loggen ist `pipi trace --text HOST` vorgesehen; Nicht-TTY/Pipe-Ausgaben bleiben automatisch Text und drucken je Zyklus eine Tabelle.

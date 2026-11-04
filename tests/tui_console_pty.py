@@ -151,6 +151,48 @@ case([], ping_loopback)
 print("PASS: menu launches loopback ping, streams results, supports stop/back")
 
 
+
+def trace_inplace_menu(s):
+    s.press(b"5")            # MTR / TRACE module
+    s.until("TRACE / FORM")
+    s.press(b"\x12")         # Ctrl-R: begin a bounded 3-cycle loopback trace
+    s.until("TRACE / CYCLE")
+    s.until("HOP ADDRESS")
+    s.until(" 1  127.0.0.1")
+    # Normal child trace emits only per-hop updates. No full table snapshots
+    # should be appended or leak the private IPC prefix into the UI.
+    assert b"@pipi-hop" not in s.seen
+    s.press(b"q")
+    s.until("TRACE / FORM", from_now=True)
+    s.press(b"\x1b")
+    s.until("NETWORK CONTROL CENTER", from_now=True)
+    s.press(b"q")
+
+
+case(["tui"], trace_inplace_menu)
+print("PASS: MTR menu renders one stable hop table rather than appended snapshots")
+
+
+def trace_inplace_direct():
+    session = Session([
+        "trace", "--tui", "-4", "-c", "4", "--max-hops", "2",
+        "-W", "0.5", "-i", "0.1", "--smoke", "--ascii", "127.0.0.1",
+    ])
+    try:
+        session.until("pipi TRACE")
+        session.finish()
+        # An initial clear is fine; subsequent per-probe updates must use
+        # cursor positioning and single-line erase, never full-screen wipes.
+        assert session.seen.count(b"\x1b[2J") == 1, session.seen.count(b"\x1b[2J")
+        assert session.seen.count(b"\x1b[2K") >= 5
+        assert b"\x1b[3;1H" in session.seen
+    finally:
+        session.close()
+
+
+trace_inplace_direct()
+print("PASS: direct MTR trace reuses the same screen rows across cycles; no re-clear")
+
 non_tty = subprocess.run([BINARY], input=b"", stdout=subprocess.PIPE,
                          stderr=subprocess.PIPE, timeout=4)
 assert non_tty.returncode == 2, non_tty

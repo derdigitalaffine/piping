@@ -2,7 +2,18 @@
 
 **pipi** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.3.0**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die v0.2-Version bestand echte Linux-Tests im [Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991).** Für den aktuellen v0.3-TUI-Stand gelten neue unabhängige CI-/PTY-Abnahmeprüfungen.
+> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.3.1**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die v0.2-Version bestand echte Linux-Tests im [Run #41826662991](https://github.com/derdigitalaffine/piping/actions/runs/41826662991).** Für den aktuellen v0.3-TUI-Stand gelten neue unabhängige CI-/PTY-Abnahmeprüfungen.
+
+## Neu in v0.3.1: MTR wie ein Live-Monitor
+
+Im Trace-Modus bleibt jeder Hop an **derselben Bildschirmposition**. Eine neue Antwort überschreibt nur die betroffene Zeile; es gibt keine neue Tabelle und kein vollständiges Löschen des Bildschirms bei jeder Messung. Ältere Hops bleiben beim nächsten Messzyklus sichtbar. Smoke-Graph und Verlust-/RTT-Werte werden direkt in dieser Hop-Zeile fortgeschrieben.
+
+    pipi trace 1.1.1.1                  # Auf TTY automatisch MTR-Live-Tabelle (mit tui-Feature)
+    pipi trace --tui --smoke 1.1.1.1    # Explizit live
+    pipi trace --text -c 3 1.1.1.1      # Klassische Tabellen je Zyklus, auch auf TTY
+    pipi                                # Menü → TRACE → F5/Strg+R; ebenfalls Live-Hop-Tabelle
+
+Beim interaktiven Aufruf wird die TUI nur mit kompiliertem Cargo-Feature `tui` automatisch gewählt. **Pipes, Skripte und normale CLI-Ausgaben bleiben unverändert**. Bei Terminalgrößenänderungen wird der Bildschirm einmal angepasst, ansonsten werden nur geänderte Zeilen geschrieben. [Details](docs/TUI_DASHBOARD.md).
 
 ## Neu: pipi 0.3 Color-TUI mit menügeführten Formularen
 

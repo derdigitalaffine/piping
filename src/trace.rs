@@ -7,6 +7,7 @@ use crate::linux;
 use crate::stats::Stats;
 use crate::trace_socket::{ErrorKind, ErrorReply, ProbeId, TraceSocket};
 use std::collections::VecDeque;
+use std::io::{self, IsTerminal};
 use std::net::{IpAddr, SocketAddr};
 use std::time::{Duration, Instant};
 
@@ -23,6 +24,8 @@ struct Options {
     smoke: bool,
     ascii: bool,
     tui: bool,
+    text: bool,
+    live_rows: bool,
 }
 
 fn help() -> &'static str {
@@ -36,7 +39,8 @@ fn help() -> &'static str {
         "  -i, --interval SEC  Minimum interval between sends (0.05..5; default 0.1)\n",
         "  --smoke             Per-hop SmokePing-style RTT/loss history\n",
         "  --ascii             ASCII-only history bars\n",
-        "  --tui               Compact full-screen trace (requires --features tui)\n",
+        "  --tui               Live in-place hop table (requires --features tui)\n",
+        "  --text              Force classic per-cycle output, even on a TTY\n",
         "  --help              This help\n\n",
         "Tracer uses Linux unprivileged ICMP datagram sockets and ICMP error queues.\n",
         "Some routers suppress ICMP Time Exceeded; * means unresponsive, not absent.\n",
@@ -61,6 +65,8 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
         smoke: false,
         ascii: false,
         tui: false,
+        text: false,
+        live_rows: false,
     };
     let mut i = 0;
     while i < args.len() {
@@ -108,6 +114,11 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
                 options.interval = seconds(args, &mut i, "--interval", 0.05, 5.0)?;
             }
             "--smoke" => options.smoke = true,
+            "--text" => options.text = true,
+            "--live-rows" => {
+                options.live_rows = true;
+                options.smoke = true;
+            }
             "--ascii" => {
                 options.ascii = true;
                 options.smoke = true;
@@ -123,6 +134,9 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             other => return Err(format!("unexpected trace argument: {other}")),
         }
         i += 1;
+    }
+    if (options.tui && options.text) || (options.tui && options.live_rows) {
+        return Err("--tui cannot be combined with --text or --live-rows".into());
     }
     if options.target.trim().is_empty() {
         return Err("trace requires HOST (see 'pipi trace --help')".into());
@@ -260,29 +274,28 @@ fn probe(
 
 fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<String> {
     let mut out = Vec::with_capacity(hops.len() + 1);
-    if width < 72 {
-        out.push("HOP IP           LOSS  LAST  SMOKE".to_owned());
+    if width < 54 {
+        out.push("HOP ADDRESS     LOSS AVG  SMOKE".into());
         for (i, hop) in hops.iter().enumerate() {
-            let addr = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
-            let addr: String = addr.chars().take(11).collect();
-            let last = hop
-                .recent
-                .back()
-                .copied()
-                .flatten()
-                .map_or_else(|| "-".to_owned(), |v| format!("{v:.1}"));
+            let ip = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
+            let addr: String = ip.chars().take(11).collect();
+            let avg = if hop.stats.received == 0 {
+                "-".to_owned()
+            } else {
+                format!("{:.1}", hop.stats.mean)
+            };
             let prefix = format!(
-                "{:>2}  {:<11} {:>4.0}% {:>6}",
+                "{:>2}  {:<11} {:>3.0}% {:>5}",
                 i + 1,
                 addr,
                 hop.stats.loss_percent(),
-                last
+                avg
             );
-            let budget = width.saturating_sub(prefix.chars().count() + 2);
+            let available = width.saturating_sub(prefix.chars().count() + 2);
             out.push(format!(
                 "{prefix} {}",
                 if smoke {
-                    graph::sparkline(&hop.recent, budget, ascii)
+                    graph::sparkline(&hop.recent, available, ascii)
                 } else {
                     String::new()
                 }
@@ -290,57 +303,95 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
         }
         return out;
     }
-    if smoke {
-        out.push(
-            "HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST  SMOKE".into(),
-        );
-    } else {
-        out.push("HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST".into());
+    if width < 110 {
+        out.push("HOP ADDRESS                LOSS  SENT  LAST   AVG  SMOKE".into());
+        for (i, hop) in hops.iter().enumerate() {
+            let ip = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
+            let addr: String = ip.chars().take(20).collect();
+            let last = hop
+                .recent
+                .back()
+                .copied()
+                .flatten()
+                .map_or_else(|| "-".to_owned(), |ms| format!("{ms:.1}"));
+            let avg = if hop.stats.received == 0 {
+                "-".to_owned()
+            } else {
+                format!("{:.1}", hop.stats.mean)
+            };
+            let prefix = format!(
+                "{:>2}  {:<20} {:>4.0}%  {:>4} {:>6} {:>6}",
+                i + 1,
+                addr,
+                hop.stats.loss_percent(),
+                hop.stats.sent,
+                last,
+                avg
+            );
+            let available = width.saturating_sub(prefix.chars().count() + 2).min(40);
+            out.push(format!(
+                "{prefix} {}",
+                if smoke {
+                    graph::sparkline(&hop.recent, available, ascii)
+                } else {
+                    String::new()
+                }
+            ));
+        }
+        return out;
     }
+    out.push(if smoke {
+        "HOP ADDRESS                 LOSS%  SENT  LAST    AVG   BEST  WORST  SMOKE".into()
+    } else {
+        "HOP ADDRESS                 LOSS%  SENT  LAST    AVG   BEST  WORST".into()
+    });
     for (i, hop) in hops.iter().enumerate() {
-        let addr = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
+        let ip = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
         let last = hop
             .recent
             .back()
             .copied()
             .flatten()
-            .map_or_else(|| "-".to_owned(), |v| format!("{v:.1}"));
-        let stats = &hop.stats;
-        let best = if stats.received == 0 {
-            "-".to_owned()
-        } else {
-            format!("{:.1}", stats.min)
+            .map_or_else(|| "-".to_owned(), |ms| format!("{ms:.1}"));
+        let fmt = |value: f64| -> String {
+            if hop.stats.received == 0 {
+                "-".into()
+            } else {
+                format!("{value:.1}")
+            }
         };
-        let worst = if stats.received == 0 {
-            "-".to_owned()
-        } else {
-            format!("{:.1}", stats.max)
-        };
-        let avg = if stats.received == 0 {
-            "-".to_owned()
-        } else {
-            format!("{:.1}", stats.mean)
-        };
-        let mut line = format!(
-            "{:>2}   {:<21} {:>5.1}  {:>4} {:>6} {:>6} {:>6} {:>6}",
+        let mut row = format!(
+            "{:>2}  {:<23} {:>5.1}  {:>4} {:>6} {:>6} {:>6} {:>6}",
             i + 1,
-            addr,
-            stats.loss_percent(),
-            stats.sent,
+            ip,
+            hop.stats.loss_percent(),
+            hop.stats.sent,
             last,
-            avg,
-            best,
-            worst,
+            fmt(hop.stats.mean),
+            fmt(hop.stats.min),
+            fmt(hop.stats.max)
         );
         if smoke {
-            let used = line.chars().count();
-            let available = width.saturating_sub(used + 2).min(36);
-            line.push(' ');
-            line.push_str(&graph::sparkline(&hop.recent, available.max(1), ascii));
+            let available = width.saturating_sub(row.chars().count() + 2).min(36);
+            row.push(' ');
+            row.push_str(&graph::sparkline(&hop.recent, available, ascii));
         }
-        out.push(line);
+        out.push(row);
     }
     out
+}
+
+#[cfg(feature = "tui")]
+fn visible_rows(hops: &[Hop], highest: usize, ascii: bool, width: usize) -> Vec<String> {
+    // The visible hop count never shrinks when a new trace cycle starts.
+    render_rows(&hops[..highest], true, ascii, width)
+}
+
+/// One stable per-hop update for the menu's TUI, instead of printing a whole
+/// MTR table per cycle. The index is one-based and the payload is safe text.
+fn live_update(hops: &[Hop], hop: usize, cycle: u32, ascii: bool) -> String {
+    let rendered = render_rows(&hops[..hop], true, ascii, 74);
+    format!("@pipi-hop\t{hop}\t{cycle}\t{}", rendered[hop])
 }
 
 fn text_cycle(hops: &[Hop], cycle: u32, dest: IpAddr, smoke: bool, ascii: bool) {
@@ -360,7 +411,14 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     if options.tui && !cfg!(feature = "tui") {
         return Err("trace --tui requires 'cargo install --features tui'".into());
     }
-    crate::colour::configured(!options.tui);
+    // MTR-like behavior by default on interactive TTYs. Scripts and pipes keep
+    // conventional per-cycle output; --text explicitly opts out on a terminal.
+    let full_screen = options.tui
+        || (!options.text
+            && !options.live_rows
+            && cfg!(feature = "tui")
+            && io::stdout().is_terminal());
+    crate::colour::configured(!full_screen && !options.live_rows);
     let target = cli::resolve(&options.target, options.family).map_err(|e| e.to_string())?;
     let sock = TraceSocket::new(target.is_ipv6())?;
     crate::engine::install_signals();
@@ -371,7 +429,9 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     let mut reached = false;
     let mut cycle = 0_u32;
     #[cfg(feature = "tui")]
-    let screen = if options.tui {
+    let mut highest_hop = 0_usize;
+    #[cfg(feature = "tui")]
+    let screen = if full_screen {
         Some(crate::tui::Screen::enter()?)
     } else {
         None
@@ -421,34 +481,43 @@ pub fn run(args: &[String]) -> Result<i32, String> {
                     false
                 }
             };
+            if options.live_rows {
+                crate::engine::emit(&live_update(&hops, usize::from(ttl), cycle, options.ascii));
+            }
             #[cfg(feature = "tui")]
             if let Some(screen) = screen.as_ref() {
-                let width = crate::tui::dimensions().0;
-                let rows = render_rows(&hops[..usize::from(ttl)], true, options.ascii, width);
+                highest_hop = highest_hop.max(usize::from(ttl));
+                let width = crate::tui::dimensions().0.saturating_sub(5);
+                let rows = visible_rows(&hops, highest_hop, options.ascii, width);
                 screen.show_lines(
                     &format!(
-                        "pipi TRACE {}  | cycle {}  | hop {}/{}",
+                        "pipi TRACE {}  | cycle {}",
                         cli::visible_host(&options.target),
-                        cycle,
-                        ttl,
-                        options.hops
+                        cycle
                     ),
                     &rows,
-                    "MTR-style | X=timeout | Ctrl-C exit | local ICMP errors",
+                    "MTR live | RTT in ms | X=timeout | Ctrl-C exit",
                 );
             }
             if terminal {
                 break;
             }
         }
-        if !options.tui {
+        if !full_screen && !options.live_rows {
             text_cycle(&hops, cycle, target.ip(), options.smoke, options.ascii);
         }
     }
     #[cfg(feature = "tui")]
     drop(screen);
-    if options.tui {
-        text_cycle(&hops, cycle, target.ip(), options.smoke, options.ascii);
+    if full_screen {
+        crate::engine::emit(&format!(
+            "pipi trace {} | {} cycles | {} hops seen",
+            target.ip(),
+            cycle,
+            hops.iter()
+                .rposition(|hop| hop.stats.sent > 0)
+                .map_or(0, |i| i + 1)
+        ));
     }
     Ok(if reached { 0 } else { 1 })
 }
@@ -456,6 +525,41 @@ pub fn run(args: &[String]) -> Result<i32, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn mtr_event_contains_one_hop_and_keeps_history_in_place() {
+        let mut hops = vec![Hop::default(), Hop::default()];
+        hops[0].ip = Some("127.0.0.1".parse().unwrap());
+        hops[0].stats.on_send();
+        hops[0].sample(Some(2.5));
+        let first = live_update(&hops, 1, 1, true);
+        assert!(first.starts_with("@pipi-hop\t1\t1\t"));
+        assert!(first.contains("127.0.0.1"));
+        assert!(!first.contains("HOP ADDRESS"));
+        hops[0].stats.on_send();
+        hops[0].sample(None);
+        let second = live_update(&hops, 1, 2, true);
+        assert!(second.starts_with("@pipi-hop\t1\t2\t"));
+        assert!(second.contains("50%"));
+        assert!(second.ends_with('X'));
+    }
+
+    #[cfg(feature = "tui")]
+    #[test]
+    fn earlier_hops_remain_visible_at_start_of_next_cycle() {
+        let mut hops: Vec<Hop> = (0..4).map(|_| Hop::default()).collect();
+        for hop in &mut hops {
+            hop.stats.on_send();
+            hop.sample(Some(1.0));
+        }
+        let first = visible_rows(&hops, 4, true, 90);
+        hops[0].stats.on_send();
+        hops[0].sample(Some(2.0));
+        let next_cycle = visible_rows(&hops, 4, true, 90);
+        assert_eq!(first.len(), next_cycle.len());
+        assert_eq!(first[4], next_cycle[4]);
+        assert_ne!(first[1], next_cycle[1]);
+    }
+
     #[test]
     fn trace_flags_have_safe_limits() {
         assert!(parse(&["--max-hops".into(), "33".into(), "x".into()]).is_err());

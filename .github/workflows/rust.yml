@@ -57,9 +57,6 @@ jobs:
           CARGO_TARGET_DIR="$RUNNER_TEMP/pipi-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/pipi-install" --no-default-features
           "$RUNNER_TEMP/pipi-install/bin/pipi" --version
           "$RUNNER_TEMP/pipi-install/bin/pipi" --help
-      - name: Interactive color TUI with hostless forms, second ARP confirmation, terminal restore
-        shell: bash
-        run: python3 tests/tui_console_pty.py ./target/release/pipi
       - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
         shell: bash
         run: |
@@ -73,6 +70,9 @@ jobs:
             echo "::warning::Runner does not permit sysctl changes"
           fi
           cat /proc/sys/net/ipv4/ping_group_range || true
+      - name: Interactive color TUI with hostless forms, second ARP confirmation, terminal restore
+        shell: bash
+        run: python3 tests/tui_console_pty.py ./target/release/pipi
       - name: Real Linux loopback (explicit SKIP if sandbox denies ICMP)
         shell: bash
         run: |

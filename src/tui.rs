@@ -1,7 +1,9 @@
 //! Compact color-aware terminal panels, dashboards and responsive layouts.
 //! Uses only std + Linux ioctl; all raw input handling belongs in console.rs.
 
+use std::cell::RefCell;
 use std::ffi::{c_int, c_ulong, c_void};
+use std::fmt::Write as _;
 use std::io::{self, IsTerminal, Write};
 
 const TIOCGWINSZ: c_ulong = 0x5413;
@@ -19,8 +21,44 @@ unsafe extern "C" {
     fn ioctl(fd: c_int, request: c_ulong, arg: *mut c_void) -> c_int;
 }
 
+/// Stores only the currently visible rows (at most terminal height) so changed
+/// lines can be overwritten in place. A resize invalidates the whole cache.
+#[derive(Default)]
+struct FrameCache {
+    size: Option<(usize, usize)>,
+    lines: Vec<String>,
+}
+
 pub struct Screen {
     color: bool,
+    cache: RefCell<FrameCache>,
+}
+
+/// Generate a minimal cursor-addressed update, never appending a new frame.
+/// A clear-screen is issued only for the first frame or a terminal resize.
+/// The user-facing text has already been clipped/sanitized by panel_frame().
+fn repaint(cache: &mut FrameCache, text: &str, size: (usize, usize), color: bool) -> String {
+    let lines: Vec<String> = text.split('\n').map(str::to_owned).collect();
+    let reset = cache.size != Some(size);
+    let mut output = String::new();
+    if reset {
+        output.push_str("\x1b[H\x1b[2J");
+    }
+    for index in 0..lines.len().max(cache.lines.len()) {
+        let next = lines.get(index);
+        if !reset && next == cache.lines.get(index) {
+            continue;
+        }
+        // Cursor stays in the alternate screen; erase just this single row,
+        // then paint its new content. No terminal scrollback or frame flicker.
+        let _ = write!(output, "\x1b[{};1H\x1b[2K", index + 1);
+        if let Some(line) = next {
+            output.push_str(&tint(line, color));
+        }
+    }
+    cache.lines = lines;
+    cache.size = Some(size);
+    output
 }
 
 pub fn dimensions() -> (usize, usize) {
@@ -203,28 +241,32 @@ impl Screen {
         io::stdout().flush().map_err(|e| e.to_string())?;
         Ok(Self {
             color: auto_color(),
+            cache: RefCell::new(FrameCache::default()),
         })
     }
 
     pub fn set_color(&mut self, enabled: bool) {
-        self.color = enabled && auto_color();
+        let next = enabled && auto_color();
+        if self.color != next {
+            self.color = next;
+            self.cache.borrow_mut().size = None;
+        }
     }
 
-    fn render(&self, data: &str) {
-        let mut stdout = io::stdout().lock();
-        let _ = write!(stdout, "\x1b[H\x1b[2J");
-        for (i, line) in data.split('\n').enumerate() {
-            if i > 0 {
-                let _ = write!(stdout, "\r\n");
-            }
-            let _ = write!(stdout, "{}", tint(line, self.color));
+    fn render(&self, data: &str, size: (usize, usize)) {
+        let patch = repaint(&mut self.cache.borrow_mut(), data, size, self.color);
+        if patch.is_empty() {
+            return; // Identical frame: zero terminal output, even on idle ticks.
         }
-        let _ = stdout.flush();
+        let mut stdout = io::stdout().lock();
+        let _ = stdout
+            .write_all(patch.as_bytes())
+            .and_then(|_| stdout.flush());
     }
 
     pub fn show_lines(&self, title: &str, rows: &[String], footer: &str) {
         let (w, h) = dimensions();
-        self.render(&panel_frame(title, rows, footer, w, h));
+        self.render(&panel_frame(title, rows, footer, w, h), (w, h));
     }
 
     pub fn show(&self, label: &str, graph: &str, stats: &crate::stats::Stats) {
@@ -282,6 +324,39 @@ impl Drop for Screen {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn incremental_mtr_updates_only_changed_hop_rows() {
+        let mut cache = FrameCache::default();
+        let a = "pipi TRACE\nHOP  ADDRESS LOSS\n 1   10.0.0.1 0%\nCtrl-C";
+        let first = repaint(&mut cache, a, (80, 24), false);
+        assert_eq!(first.matches("\x1b[2J").count(), 1);
+        assert!(first.contains(" 1   10.0.0.1 0%"));
+        assert_eq!(repaint(&mut cache, a, (80, 24), false), "");
+        let b = a.replace("10.0.0.1 0%", "10.0.0.1 50%");
+        let update = repaint(&mut cache, &b, (80, 24), false);
+        assert!(!update.contains("\x1b[2J"));
+        assert!(!update.contains("\x1b[1;1H"));
+        assert!(!update.contains("\x1b[2;1H"));
+        assert!(update.contains("\x1b[3;1H\x1b[2K"));
+        assert!(update.contains("50%"));
+        assert_eq!(update.matches("\x1b[2K").count(), 1);
+        // Removed lines are erased individually rather than leaving stale hops.
+        let removed = repaint(
+            &mut cache,
+            "pipi TRACE\nHOP  ADDRESS LOSS\nCtrl-C",
+            (80, 24),
+            false,
+        );
+        assert!(!removed.contains("\x1b[2J"));
+        assert!(removed.contains("\x1b[4;1H\x1b[2K"));
+        assert_eq!(
+            repaint(&mut cache, "same", (100, 24), false)
+                .matches("\x1b[2J")
+                .count(),
+            1
+        );
+    }
 
     #[test]
     fn no_color_tty_and_term_capability() {

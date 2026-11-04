@@ -73,3 +73,7 @@ See [Trace + Neighborhood guide](TRACE_NEIGHBORHOOD.md) for `--max-hops`, `--smo
 ## 0.3 interactive dashboard
 
 `pipi` or `pipi tui` without HOST opens a form-driven menu on interactive terminals (optional `tui` Cargo feature). All nine modes are accessible with keyboard-configurable arguments and explicit START; active ARP has a separate confirmation. Arrows/Tab navigate, F5/Ctrl-R start, Esc back, q stops. NO_COLOR and `pipi tui --no-color` disable ANSI color. See [TUI Dashboard](TUI_DASHBOARD.md).
+
+## MTR in-place live display (v0.3.1)
+
+With Cargo feature `tui` and an interactive terminal, `pipi trace HOST` automatically uses a persistent MTR-style hop grid. `pipi trace --tui HOST` forces it, while `pipi trace --text HOST` forces plain per-cycle output. Scripted stdout pipes remain plain text. The main menu's TRACE form streams one structured event per completed hop and replaces that hop in the visible table; no accumulating copies of full tables. The renderer only overwrites changed terminal rows, with a one-time full clear upon entry/resize.
