@@ -173,7 +173,13 @@ fn send_one(
     let sockets = context.sockets;
     let target = &mut targets[idx];
     let seq = token as u16;
-    let packet = linux::echo_request(target.addr.is_ipv6(), seq, context.nonce, token, config.size);
+    let packet = linux::echo_request(
+        target.addr.is_ipv6(),
+        seq,
+        context.nonce,
+        token,
+        config.size,
+    );
     sockets
         .for_address(target.addr)
         .send(target.addr, &packet)
