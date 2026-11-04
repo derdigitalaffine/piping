@@ -2,7 +2,7 @@
 //! subset of iputils ping, not a drop-in clone.
 
 use std::fmt;
-use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
+use std::net::{SocketAddr, ToSocketAddrs};
 use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -346,10 +346,6 @@ pub fn visible_host(host: &str) -> String {
         .filter(|c| !c.is_control() && *c != '\u{1b}')
         .take(256)
         .collect()
-}
-
-pub fn family_matches(addr: IpAddr, family: Option<bool>) -> bool {
-    family.is_none_or(|v6| v6 == addr.is_ipv6())
 }
 
 #[cfg(test)]

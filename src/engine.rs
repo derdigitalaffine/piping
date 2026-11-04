@@ -154,26 +154,32 @@ fn select_target(
     None
 }
 
+struct SendContext<'a> {
+    config: &'a Config,
+    sockets: &'a SocketSet,
+    start: Instant,
+    nonce: u64,
+}
+
 fn send_one(
-    config: &Config,
-    sockets: &SocketSet,
+    context: &SendContext<'_>,
     targets: &mut [Target],
     pending: &mut HashMap<u64, Pending>,
     history: &mut History,
-    start: Instant,
-    nonce: u64,
     token: u64,
     idx: usize,
 ) -> Result<(), String> {
+    let config = context.config;
+    let sockets = context.sockets;
     let target = &mut targets[idx];
     let seq = token as u16;
-    let packet = linux::echo_request(target.addr.is_ipv6(), seq, nonce, token, config.size);
+    let packet = linux::echo_request(target.addr.is_ipv6(), seq, context.nonce, token, config.size);
     sockets
         .for_address(target.addr)
         .send(target.addr, &packet)
         .map_err(|e| format!("send ICMP echo to {}: {e}", target.addr.ip()))?;
     let now = Instant::now();
-    let second = now.duration_since(start).as_secs();
+    let second = now.duration_since(context.start).as_secs();
     pending.insert(
         token,
         Pending {
@@ -500,13 +506,15 @@ pub fn run(config: Config) -> Result<i32, String> {
         };
         if let Some(idx) = candidate {
             send_one(
-                &config,
-                &sockets,
+                &SendContext {
+                    config: &config,
+                    sockets: &sockets,
+                    start,
+                    nonce,
+                },
                 &mut targets,
                 &mut pending,
                 &mut history,
-                start,
-                nonce,
                 token,
                 idx,
             )?;
