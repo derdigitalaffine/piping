@@ -4,6 +4,16 @@
 
 > **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat auf **`main`** – [PR #18](https://github.com/derdigitalaffine/piping/pull/18) und [PR #19](https://github.com/derdigitalaffine/piping/pull/19) gemergt.** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben. Die neuesten GitHub-Actions-Jobs starteten nach dem Merge ohne Schritte/Logs und gelten **nicht** als bestandene Prüfung.
 
+## Nächste Entwicklungsstufe: schneller ICMP-Hot-Path und Layer-2 Discovery
+
+Auf dem Branch [`feat/fastpath-l2-discovery`](https://github.com/derdigitalaffine/piping/tree/feat/fastpath-l2-discovery) werden pro Ping wiederverwendbare Paketpuffer, eine O(1)-Range-Queue, weniger Poll-Wakeups und speichersparende Sweep-Statistiken umgesetzt. `piping discover` kann bekannte ARP-/IPv6-NDP-Nachbarn passiv aus Netlink lesen; aktive ARP-Erkennung auf direkt angeschlossenen Netzen ist ausdrücklich opt-in. Details: [Layer-2-Handbuch](docs/DISCOVERY.md). **Neue Benchmarks/Builds sind wegen nicht gestarteter GitHub-Actions-Jobs noch nicht bestätigt.**
+
+```sh
+piping discover --interface eth0
+piping discover --family 6 --output jsonl
+piping discover --active 192.168.1.0/24 -i eth0 --pps 20
+```
+
 ## CLI-Befehle auf `main`
 
 ```sh

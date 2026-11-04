@@ -63,3 +63,9 @@ Bevorzugt gut gewartete, kleine Rust-Crates statt eigener Unsafe-FFI; `socket2` 
 ## Skalierungsstrategie
 
 Single target first; danach bounded multi-target send/receive. Große Bereiche als Lazy-Iterator statt Materialisierung, Hard-Caps auf hosts, workers, PPS und payload; Ausgaben streamen. TUI empfängt bounded Broadcast-/Ringbuffer, darf die Messengine nie blockieren.
+
+## M6 Fastpath und Discovery
+
+Die ICMP-Messengine verwendet einen vorinitialisierten Payload-Buffer, ersetzt nur 24 Bytes pro Probe, leert Receive-Queues direkt in einen Callback ohne per-Wakeup-Vec, und schläft per Linux poll ohne fixen 200-ms-Wecker. Für Range läuft eine begrenzte `VecDeque`-Bereitliste: ein Host wird erst nach Abschluss eines Echo/Timeout wieder freigeschaltet, O(1) pro Auswahl. Range-Stats werden ohne RTT-Percentile-Historie pro Host geführt.
+
+Layer-2 ist vom ICMP-Engine-Modul getrennt: `src/discovery.rs` validiert CLI und Ausgabe, `src/neighbor.rs` liest read-only RTM_GETNEIGH / NLM_F_DUMP mit defensivem, endian-korrektem Parser, `src/arp.rs` sendet nur bei `--active` minimal gültige ARP-Ethernet-Frames. Keine zusätzlichen Cargo-Abhängigkeiten; der Standard-Ping öffnet keine Raw-Ethernet-Sockets. Ein gescheitertes/ausstehendes CI-Run ist kein Nachweis von Funktion oder Performance.

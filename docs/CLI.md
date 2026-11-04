@@ -13,6 +13,8 @@ Linux-only ICMP Echo diagnostics in Rust. The default mode behaves like a conven
 | `piping range 2001:db8::/126 --max-hosts 16` | bounded IPv6 CIDR sweep |
 | `piping monitor localhost --window 60 --ascii` | streaming text RTT distribution |
 | `piping tui localhost` | opt-in fullscreen terminal (requires `--features tui`) |
+| `piping discover` | passive ARP/NDP kernel neighbor discovery (no scan) |
+| `piping discover --active 192.168.1.0/24 -i eth0` | explicit on-link active IPv4 ARP sweep (CAP_NET_RAW) |
 
 ## Options
 
@@ -55,3 +57,7 @@ A bucket groups probes sent in a one-second window. The graph shows median as `*
 - Hostname resolution uses the system resolver under a five-second timeout (numeric IPv4/IPv6 addresses bypass DNS). This deadline is separate from the per-probe ICMP timeout. A stalled NSS thread may remain until process exit.
 - Percentiles for long-running sessions summarize a bounded rolling sample of the latest 2048 RTT values; min/avg/max/mdev cover all accepted replies.
 - The lightweight optional TUI is an alternate-screen presentation with Ctrl-C exit, not a full keybinding-driven curses application.
+
+## Layer-2 discovery (next source candidate)
+
+The `discover` command is independent from ICMP ping and is *read-only by default*. For Netlink ARP/NDP output, optional explicit on-link ARP probes, privileges, PPS/host caps, JSONL/CSV schemas and safety boundaries see [`docs/DISCOVERY.md`](DISCOVERY.md). The classic `piping HOST` path is unaffected.
