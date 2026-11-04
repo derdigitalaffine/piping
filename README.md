@@ -2,7 +2,7 @@
 
 **piping** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Rust-Implementierung als [Draft PR #18](https://github.com/derdigitalaffine/piping/pull/18) vorhanden.** Linux-CI hat die ersten 21 Unit- und vier CLI-Tests bestanden; ein vollständig grüner Build inklusive Clippy und ICMP-Loopback-Abnahme wird im [QA-Bericht](docs/QA_REPORT.md) dokumentiert. Der PR ist bis dahin kein freigegebener Produktionsrelease.
+> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat im [PR #18](https://github.com/derdigitalaffine/piping/pull/18).** Der [CI-Lauf #41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384) bestätigt 24 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben.
 
 ## Benutzbare CLI im Entwicklungsbranch
 

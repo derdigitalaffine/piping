@@ -2,7 +2,7 @@
 
 ## Preconditions
 
-Release only after Linux CI and real loopback ICMP checks pass, tests and documentation agree, and a release decision is recorded in `docs/QA_REPORT.md`.
+Linux CI, Rust 1.85 builds and live IPv4/IPv6 loopback checks are passing as of run [#41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384). Release only after remaining QA restrictions and unsafe FFI review are cleared, an independent Linux installation has been checked, and the decision is recorded in `docs/QA_REPORT.md`.
 
 ## Source build
 
@@ -30,6 +30,6 @@ cargo build --release --locked --features tui
 
 ## Packaging
 
-Do not publish an unverified binary. Once accepted, produce and test reproducible Linux x86_64 and aarch64 binaries, SHA256 manifest, `CHANGELOG.md`, signed source tag, and explicit license/redistribution decision by repository owner. No pre-generated release binaries are claimed.
+CI currently produces local x86_64 minimal and TUI tarballs plus SHA256SUMS. GitHub Actions storage quota was exhausted when an upload was attempted, so publishing is deliberately optional on version tags only. No artifact is currently claimed as downloadable. Do not publish an unverified binary; before public distribution, test aarch64, record checksums, choose a license, create a verified version tag and generate release notes.
 
 No install step automatically runs `sudo`, `setcap`, or mutates kernel settings. If datagram ping sockets are disallowed, document the operator's group-policy prerequisite; do not silently relax system security.
