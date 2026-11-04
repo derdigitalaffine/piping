@@ -372,10 +372,8 @@ fn flag(args: &mut Vec<String>, fields: &[Field], key: &str, name: &str) {
 fn arguments(mode: Mode, fields: &[Field]) -> Result<Vec<String>, String> {
     let mut args = Vec::new();
     let fam = get(fields, "family");
-    if fam == "4" || fam == "6" {
-        if !matches!(mode, Mode::Neighbors | Mode::Discover) {
-            args.push(format!("-{fam}"));
-        }
+    if (fam == "4" || fam == "6") && !matches!(mode, Mode::Neighbors | Mode::Discover) {
+        args.push(format!("-{fam}"));
     }
     match mode {
         Mode::Ping | Mode::Fast | Mode::Range | Mode::Smoke => {
