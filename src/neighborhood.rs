@@ -22,8 +22,14 @@ struct Options {
 impl Default for Options {
     fn default() -> Self {
         Self {
-            interface: None, family: None, limit: 128, ascii: false,
-            tui: false, watch: None, count: None, active: None,
+            interface: None,
+            family: None,
+            limit: 128,
+            ascii: false,
+            tui: false,
+            watch: None,
+            count: None,
+            active: None,
         }
     }
 }
@@ -78,8 +84,11 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             }
             "--max-results" => {
                 i += 1;
-                let number: usize = args.get(i).ok_or("--max-results needs a value")?
-                    .parse().map_err(|_| "invalid --max-results")?;
+                let number: usize = args
+                    .get(i)
+                    .ok_or("--max-results needs a value")?
+                    .parse()
+                    .map_err(|_| "invalid --max-results")?;
                 if !(1..=512).contains(&number) {
                     return Err("--max-results must be 1..=512".into());
                 }
@@ -89,8 +98,11 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             "--tui" => options.tui = true,
             "--watch" => {
                 i += 1;
-                let seconds: u64 = args.get(i).ok_or("--watch needs seconds")?
-                    .parse().map_err(|_| "invalid --watch")?;
+                let seconds: u64 = args
+                    .get(i)
+                    .ok_or("--watch needs seconds")?
+                    .parse()
+                    .map_err(|_| "invalid --watch")?;
                 if !(2..=120).contains(&seconds) {
                     return Err("--watch seconds must be 2..=120".into());
                 }
@@ -98,8 +110,11 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
             }
             "-c" | "--count" => {
                 i += 1;
-                let number: u32 = args.get(i).ok_or("--count needs a value")?
-                    .parse().map_err(|_| "invalid --count")?;
+                let number: u32 = args
+                    .get(i)
+                    .ok_or("--count needs a value")?
+                    .parse()
+                    .map_err(|_| "invalid --count")?;
                 if !(1..=1000).contains(&number) {
                     return Err("--count must be 1..=1000".into());
                 }
@@ -124,26 +139,40 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
         i += 1;
     }
     if options.active.is_some()
-        && (options.interface.is_none() || options.tui || options.watch.is_some()
-            || options.count.is_some_and(|n| n != 1) || options.family == Some(true))
+        && (options.interface.is_none()
+            || options.tui
+            || options.watch.is_some()
+            || options.count.is_some_and(|n| n != 1)
+            || options.family == Some(true))
     {
-        return Err("--active requires --interface and a one-shot IPv4 view; no --tui/--watch/IPv6".into());
+        return Err(
+            "--active requires --interface and a one-shot IPv4 view; no --tui/--watch/IPv6".into(),
+        );
     }
     Ok(Some(options))
 }
 
 fn sanitize(s: &str) -> String {
-    s.chars().filter(|c| !c.is_control() && *c != '\u{1b}').take(80).collect()
+    s.chars()
+        .filter(|c| !c.is_control() && *c != '\u{1b}')
+        .take(80)
+        .collect()
 }
 
 fn mac(mac: &[u8]) -> String {
-    if mac.is_empty() { return "unknown-mac".to_owned(); }
-    mac.iter().map(|byte| format!("{byte:02x}")).collect::<Vec<_>>().join(":")
+    if mac.is_empty() {
+        return "unknown-mac".to_owned();
+    }
+    mac.iter()
+        .map(|byte| format!("{byte:02x}"))
+        .collect::<Vec<_>>()
+        .join(":")
 }
 
 fn state(n: &Neighbor) -> &'static str {
-    if n.active { "ARP-REPLY" }
-    else {
+    if n.active {
+        "ARP-REPLY"
+    } else {
         match n.state {
             2 => "reachable",
             4 => "stale",
@@ -173,21 +202,31 @@ fn render(
     let child = if ascii { "|  " } else { "│  " };
     let leaf = if ascii { "+--" } else { "└──" };
     rows.push("LOCAL HOST".to_owned());
-    let mut selected_neighbors: Vec<&Neighbor> = neighbors.iter().filter(|n| {
-        selected.is_none_or(|i| n.ifindex == i)
-            && family.is_none_or(|v6| n.ip.is_ipv6() == v6)
-    }).collect();
-    selected_neighbors.sort_unstable_by(|a,b| a.ifindex.cmp(&b.ifindex).then(a.ip.cmp(&b.ip)));
-    selected_neighbors.dedup_by(|a,b| a.ifindex == b.ifindex && a.ip == b.ip);
+    let mut selected_neighbors: Vec<&Neighbor> = neighbors
+        .iter()
+        .filter(|n| {
+            selected.is_none_or(|i| n.ifindex == i) && family.is_none_or(|v6| n.ip.is_ipv6() == v6)
+        })
+        .collect();
+    selected_neighbors.sort_unstable_by(|a, b| a.ifindex.cmp(&b.ifindex).then(a.ip.cmp(&b.ip)));
+    selected_neighbors.dedup_by(|a, b| a.ifindex == b.ifindex && a.ip == b.ip);
     let total = selected_neighbors.len();
     selected_neighbors.truncate(max_results);
     let truncated = total > selected_neighbors.len();
     for (&ifindex, name) in interfaces {
-        if selected.is_some_and(|i| i != ifindex) { continue; }
-        let group: Vec<_> = selected_neighbors.iter()
+        if selected.is_some_and(|i| i != ifindex) {
+            continue;
+        }
+        let group: Vec<_> = selected_neighbors
+            .iter()
             .filter(|n| n.ifindex == ifindex)
             .collect();
-        rows.push(format!("{joint} {} (ifindex {})  [{} cached]", sanitize(name), ifindex, group.len()));
+        rows.push(format!(
+            "{joint} {} (ifindex {})  [{} cached]",
+            sanitize(name),
+            ifindex,
+            group.len()
+        ));
         if group.is_empty() {
             rows.push(format!("{child}{leaf} no observed neighbors"));
         }
@@ -197,13 +236,15 @@ fn render(
                 "{child}{marker} {}  [{}]  {}  ({})",
                 entry.ip,
                 if entry.ip.is_ipv4() { "ARP" } else { "NDP" },
-                mac(&entry.mac), state(entry),
+                mac(&entry.mac),
+                state(entry),
             ));
         }
     }
     rows.push(format!(
         "Observed {} / {} neighbors{} — cache-only; not an Ethernet topology",
-        selected_neighbors.len(), total,
+        selected_neighbors.len(),
+        total,
         if truncated { " (truncated)" } else { "" },
     ));
     (rows, total, truncated)
@@ -211,10 +252,16 @@ fn render(
 
 fn snapshot(options: &Options) -> Result<(Vec<String>, usize), String> {
     let interfaces = neighbor::interfaces()?;
-    let ifindex = options.interface.as_ref().map(|iface| {
-        interfaces.iter().find_map(|(index, name)| (name == iface).then_some(*index))
-            .ok_or_else(|| format!("interface {iface} is not present"))
-    }).transpose()?;
+    let ifindex = options
+        .interface
+        .as_ref()
+        .map(|iface| {
+            interfaces
+                .iter()
+                .find_map(|(index, name)| (name == iface).then_some(*index))
+                .ok_or_else(|| format!("interface {iface} is not present"))
+        })
+        .transpose()?;
     let rows = if let Some(ref cidr) = options.active {
         let interface = options.interface.as_deref().unwrap_or_default();
         let net = if cidr == "auto" {
@@ -223,13 +270,23 @@ fn snapshot(options: &Options) -> Result<(Vec<String>, usize), String> {
             cidr.to_owned()
         };
         crate::arp::scan(
-            &net, interface, ifindex.unwrap_or_default(), 20, Duration::from_secs(2), 256,
+            &net,
+            interface,
+            ifindex.unwrap_or_default(),
+            20,
+            Duration::from_secs(2),
+            256,
         )?
     } else {
         neighbor::dump()?
     };
     let (rows, total, _) = render(
-        &interfaces, &rows, ifindex, options.family, options.limit, options.ascii,
+        &interfaces,
+        &rows,
+        ifindex,
+        options.family,
+        options.limit,
+        options.ascii,
     );
     Ok((rows, total))
 }
@@ -244,9 +301,17 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     }
     crate::engine::install_signals();
     #[cfg(feature = "tui")]
-    let screen = if options.tui { Some(crate::tui::Screen::enter()?) } else { None };
+    let screen = if options.tui {
+        Some(crate::tui::Screen::enter()?)
+    } else {
+        None
+    };
     let interval = options.watch.unwrap_or(Duration::from_secs(5));
-    let max = options.count.or(if options.tui || options.watch.is_some() { None } else { Some(1) });
+    let max = options.count.or(if options.tui || options.watch.is_some() {
+        None
+    } else {
+        Some(1)
+    });
     let mut cycle = 0_u32;
     while !crate::engine::interrupted() && max.is_none_or(|count| cycle < count) {
         cycle += 1;
@@ -255,20 +320,31 @@ pub fn run(args: &[String]) -> Result<i32, String> {
         #[cfg(feature = "tui")]
         if let Some(screen) = screen.as_ref() {
             screen.show_lines(
-                &format!("pipi NEIGHBORHOOD | {} neighbors | refresh {}s",
-                    total, interval.as_secs()),
+                &format!(
+                    "pipi NEIGHBORHOOD | {} neighbors | refresh {}s",
+                    total,
+                    interval.as_secs()
+                ),
                 &rows,
                 "ARP/NDP cache | observed local adjacency only | Ctrl-C exit",
             );
         }
         if !options.tui {
-            crate::engine::emit(&format!("pipi neighborhood | snapshot {cycle} | observed={total} | passive={}", options.active.is_none()));
-            for row in &rows { crate::engine::emit(row); }
+            crate::engine::emit(&format!(
+                "pipi neighborhood | snapshot {cycle} | observed={total} | passive={}",
+                options.active.is_none()
+            ));
+            for row in &rows {
+                crate::engine::emit(row);
+            }
         }
-        if max.is_some_and(|count| cycle >= count) { break; }
+        if max.is_some_and(|count| cycle >= count) {
+            break;
+        }
         while !crate::engine::interrupted() && start.elapsed() < interval {
-            std::thread::sleep(Duration::from_millis(100)
-                .min(interval.saturating_sub(start.elapsed())));
+            std::thread::sleep(
+                Duration::from_millis(100).min(interval.saturating_sub(start.elapsed())),
+            );
         }
     }
     #[cfg(feature = "tui")]
@@ -288,21 +364,54 @@ mod tests {
         assert!(options.active.is_none());
         assert!(!options.tui);
         assert!(parse(&["--active".into(), "10.0.0.0/24".into()]).is_err());
-        assert!(parse(&["--active".into(), "10.0.0.0/24".into(), "-i".into(), "eth0".into(), "--tui".into()]).is_err());
+        assert!(
+            parse(&[
+                "--active".into(),
+                "10.0.0.0/24".into(),
+                "-i".into(),
+                "eth0".into(),
+                "--tui".into()
+            ])
+            .is_err()
+        );
         assert!(parse(&["--watch".into(), "1".into()]).is_err());
         assert!(parse(&["--scan-local".into()]).is_err());
-        assert!(parse(&["--scan-local".into(), "-i".into(), "eth0".into(), "--tui".into()]).is_err());
-        assert!(parse(&["--scan-local".into(), "-i".into(), "eth0".into()]).unwrap().unwrap().active.is_some());
+        assert!(
+            parse(&[
+                "--scan-local".into(),
+                "-i".into(),
+                "eth0".into(),
+                "--tui".into()
+            ])
+            .is_err()
+        );
+        assert!(
+            parse(&["--scan-local".into(), "-i".into(), "eth0".into()])
+                .unwrap()
+                .unwrap()
+                .active
+                .is_some()
+        );
     }
 
     #[test]
     fn graph_shows_only_observed_interface_neighbors() {
         let interfaces = BTreeMap::from([(2, "eth0".into()), (3, "wlan0".into())]);
         let neighbors = vec![
-            Neighbor { ifindex: 2, ip: IpAddr::V4(Ipv4Addr::new(192,168,1,1)),
-                mac: vec![0,17,34,51,68,85], state: 2, active: false },
-            Neighbor { ifindex: 3, ip: IpAddr::V6(Ipv6Addr::LOCALHOST),
-                mac: vec![6,7,8,9,10,11], state: 4, active: false },
+            Neighbor {
+                ifindex: 2,
+                ip: IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1)),
+                mac: vec![0, 17, 34, 51, 68, 85],
+                state: 2,
+                active: false,
+            },
+            Neighbor {
+                ifindex: 3,
+                ip: IpAddr::V6(Ipv6Addr::LOCALHOST),
+                mac: vec![6, 7, 8, 9, 10, 11],
+                state: 4,
+                active: false,
+            },
         ];
         let (lines, total, truncated) = render(&interfaces, &neighbors, None, None, 128, true);
         assert_eq!(total, 2);

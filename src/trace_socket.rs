@@ -81,9 +81,9 @@ fn ip_from_sockaddr(bytes: &[u8]) -> Option<IpAddr> {
         AF_INET if bytes.len() >= 16 => Some(IpAddr::V4(Ipv4Addr::new(
             bytes[4], bytes[5], bytes[6], bytes[7],
         ))),
-        AF_INET6 if bytes.len() >= 28 => {
-            Some(IpAddr::V6(Ipv6Addr::from(<[u8; 16]>::try_from(bytes.get(8..24)?).ok()?)))
-        }
+        AF_INET6 if bytes.len() >= 28 => Some(IpAddr::V6(Ipv6Addr::from(
+            <[u8; 16]>::try_from(bytes.get(8..24)?).ok()?,
+        ))),
         _ => None,
     }
 }
@@ -102,7 +102,11 @@ fn request_id(bytes: &[u8], ipv6: bool) -> Option<ProbeId> {
                 token: Some(u64::from_be_bytes(bytes[16..24].try_into().ok()?)),
             });
         }
-        return Some(ProbeId { seq, nonce: None, token: None });
+        return Some(ProbeId {
+            seq,
+            nonce: None,
+            token: None,
+        });
     }
     // For a stripped ping payload the first 16 bytes are nonce + token.
     if bytes.len() >= 16 {
@@ -116,18 +120,28 @@ fn request_id(bytes: &[u8], ipv6: bool) -> Option<ProbeId> {
     None
 }
 
-fn parse_control(
-    control: &[u8],
-    original: &[u8],
-    dest: IpAddr,
-    ipv6: bool,
-) -> Option<ErrorReply> {
+fn parse_control(control: &[u8], original: &[u8], dest: IpAddr, ipv6: bool) -> Option<ErrorReply> {
     let header = size_of::<usize>() + 8;
     let mut cursor = 0_usize;
     while cursor + header <= control.len() {
-        let len = usize::from_ne_bytes(control.get(cursor..cursor + size_of::<usize>())?.try_into().ok()?);
-        let level = i32::from_ne_bytes(control.get(cursor + size_of::<usize>()..cursor + size_of::<usize>() + 4)?.try_into().ok()?);
-        let ty = i32::from_ne_bytes(control.get(cursor + size_of::<usize>() + 4..cursor + header)?.try_into().ok()?);
+        let len = usize::from_ne_bytes(
+            control
+                .get(cursor..cursor + size_of::<usize>())?
+                .try_into()
+                .ok()?,
+        );
+        let level = i32::from_ne_bytes(
+            control
+                .get(cursor + size_of::<usize>()..cursor + size_of::<usize>() + 4)?
+                .try_into()
+                .ok()?,
+        );
+        let ty = i32::from_ne_bytes(
+            control
+                .get(cursor + size_of::<usize>() + 4..cursor + header)?
+                .try_into()
+                .ok()?,
+        );
         if len < header || len > control.len() - cursor {
             return None;
         }
@@ -144,10 +158,17 @@ fn parse_control(
             };
             let router = ip_from_sockaddr(&value[16..])?;
             let id = request_id(original, ipv6)?;
-            return Some(ErrorReply { destination: dest, router, kind, id });
+            return Some(ErrorReply {
+                destination: dest,
+                router,
+                kind,
+                id,
+            });
         }
         let step = len.checked_add(size_of::<usize>() - 1)? & !(size_of::<usize>() - 1);
-        if step == 0 || step > control.len() - cursor { break; }
+        if step == 0 || step > control.len() - cursor {
+            break;
+        }
         cursor += step;
     }
     None
@@ -170,7 +191,10 @@ impl TraceSocket {
         };
         // SAFETY: valid owned socket and initialized integer option.
         if unsafe { setsockopt(sock.fd(), level, option, &one, 4) } < 0 {
-            return Err(format!("IP_RECVERR required for tracing: {}", io::Error::last_os_error()));
+            return Err(format!(
+                "IP_RECVERR required for tracing: {}",
+                io::Error::last_os_error()
+            ));
         }
         Ok(Self { socket: sock, ipv6 })
     }
@@ -197,18 +221,27 @@ impl TraceSocket {
         let mut original = [0_u8; 2048];
         let mut name = [0_u8; 128];
         let mut control = Control([0_u8; 256]);
-        let mut iov = IoVec { base: original.as_mut_ptr().cast(), len: original.len() };
+        let mut iov = IoVec {
+            base: original.as_mut_ptr().cast(),
+            len: original.len(),
+        };
         let mut msg = MsgHdr {
-            name: name.as_mut_ptr().cast(), name_len: name.len() as u32,
-            iov: &mut iov, iov_len: 1,
+            name: name.as_mut_ptr().cast(),
+            name_len: name.len() as u32,
+            iov: &mut iov,
+            iov_len: 1,
             control: control.0.as_mut_ptr().cast(),
-            control_len: control.0.len(), flags: 0,
+            control_len: control.0.len(),
+            flags: 0,
         };
         // SAFETY: each pointer references initialized, writable, live stack storage.
         let got = unsafe { recvmsg(self.socket.fd(), &mut msg, MSG_ERRQUEUE | MSG_DONTWAIT) };
         if got < 0 {
             let err = io::Error::last_os_error();
-            if matches!(err.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted) {
+            if matches!(
+                err.kind(),
+                io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+            ) {
                 return Ok(None);
             }
             return Err(err);
@@ -226,12 +259,17 @@ impl TraceSocket {
         Ok(parse_control(
             &control.0[..msg.control_len],
             &original[..got as usize],
-            dest, self.ipv6,
+            dest,
+            self.ipv6,
         ))
     }
 
     pub fn wait(&self, timeout: Duration) -> io::Result<()> {
-        let mut pfd = PollFd { fd: self.socket.fd(), events: POLLIN | POLLERR, revents: 0 };
+        let mut pfd = PollFd {
+            fd: self.socket.fd(),
+            events: POLLIN | POLLERR,
+            revents: 0,
+        };
         let millis = timeout.as_micros().div_ceil(1000).min(60_000) as c_int;
         // SAFETY: pfd is a valid single-element poll buffer.
         if unsafe { poll(&mut pfd, 1, millis) } < 0 {
@@ -253,7 +291,8 @@ mod tests {
         let len = 16 + 16 + sockaddr_len;
         ctrl[0..8].copy_from_slice(&(len as u64).to_ne_bytes());
         ctrl[8..12].copy_from_slice(&(if family6 { SOL_IPV6 } else { SOL_IP }).to_ne_bytes());
-        ctrl[12..16].copy_from_slice(&(if family6 { IPV6_RECVERR } else { IP_RECVERR }).to_ne_bytes());
+        ctrl[12..16]
+            .copy_from_slice(&(if family6 { IPV6_RECVERR } else { IP_RECVERR }).to_ne_bytes());
         ctrl[20] = if family6 { 3 } else { 2 };
         ctrl[21] = kind;
         ctrl[32..34].copy_from_slice(&(if family6 { AF_INET6 } else { AF_INET }).to_ne_bytes());
@@ -262,8 +301,11 @@ mod tests {
         } else {
             ctrl[36..40].copy_from_slice(&[10, 0, 0, 1]);
         }
-        let dest = if family6 { IpAddr::V6(Ipv6Addr::LOCALHOST) }
-            else { IpAddr::V4(Ipv4Addr::new(10,0,0,2)) };
+        let dest = if family6 {
+            IpAddr::V6(Ipv6Addr::LOCALHOST)
+        } else {
+            IpAddr::V4(Ipv4Addr::new(10, 0, 0, 2))
+        };
         parse_control(&ctrl[..len], original, dest, family6)
     }
 
@@ -275,10 +317,16 @@ mod tests {
         assert_eq!(err.kind, ErrorKind::Expired);
         assert_eq!(err.router.to_string(), "10.0.0.1");
         assert_eq!(err.id.token, Some(77));
-        assert_eq!(cmsg(&packet, false, 3).unwrap().kind, ErrorKind::Unreachable);
+        assert_eq!(
+            cmsg(&packet, false, 3).unwrap().kind,
+            ErrorKind::Unreachable
+        );
         let mut v6 = vec![0x42; 64];
         crate::linux::write_echo_request(&mut v6, true, 9, 123, 9);
-        assert_eq!(cmsg(&v6, true, 3).unwrap().router, IpAddr::V6(Ipv6Addr::LOCALHOST));
+        assert_eq!(
+            cmsg(&v6, true, 3).unwrap().router,
+            IpAddr::V6(Ipv6Addr::LOCALHOST)
+        );
         assert_eq!(cmsg(&v6, true, 1).unwrap().kind, ErrorKind::Unreachable);
     }
 
@@ -294,7 +342,14 @@ mod tests {
 
     #[test]
     fn abi_layout_for_64_bit_linux() {
-        assert_eq!(size_of::<MsgHdr>(), if cfg!(target_pointer_width = "64") { 56 } else { 28 });
+        assert_eq!(
+            size_of::<MsgHdr>(),
+            if cfg!(target_pointer_width = "64") {
+                56
+            } else {
+                28
+            }
+        );
         assert_eq!(size_of::<IoVec>(), size_of::<usize>() * 2);
     }
 }

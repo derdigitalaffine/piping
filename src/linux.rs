@@ -267,8 +267,11 @@ pub fn write_echo_request(packet: &mut [u8], ipv6: bool, seq: u16, nonce: u64, t
     debug_assert!((24..=1408).contains(&packet.len()));
     packet[..8].copy_from_slice(&[
         if ipv6 { 128 } else { 8 },
-        0, 0, 0, // Kernel computes checksum.
-        0, 0, // Linux ping sockets manage the Echo identifier.
+        0,
+        0,
+        0, // Kernel computes checksum.
+        0,
+        0, // Linux ping sockets manage the Echo identifier.
         (seq >> 8) as u8,
         seq as u8,
     ]);
@@ -348,11 +351,19 @@ impl SocketSet {
 
     pub fn wait(&self, timeout: Duration) -> io::Result<()> {
         // Fixed stack storage: at most one ping socket for each IP family.
-        let empty = PollFd { fd: -1, events: 0, revents: 0 };
+        let empty = PollFd {
+            fd: -1,
+            events: 0,
+            revents: 0,
+        };
         let mut fds = [empty; 2];
         let mut n = 0;
         for sock in self.v4.iter().chain(self.v6.iter()) {
-            fds[n] = PollFd { fd: sock.fd(), events: POLLIN, revents: 0 };
+            fds[n] = PollFd {
+                fd: sock.fd(),
+                events: POLLIN,
+                revents: 0,
+            };
             n += 1;
         }
         // poll is interrupted by SIGINT/SIGTERM; do not wake every 200 ms.

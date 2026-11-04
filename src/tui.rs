@@ -35,7 +35,9 @@ pub fn dimensions() -> (usize, usize) {
 /// Keep one column free to prevent cursor-wrap and cap output to the visible height.
 fn clip(line: &str, width: usize) -> String {
     let mut output = String::new();
-    for c in line.chars().filter(|c| !c.is_control() && *c != '\u{1b}')
+    for c in line
+        .chars()
+        .filter(|c| !c.is_control() && *c != '\u{1b}')
         .take(width.saturating_sub(1))
     {
         output.push(c);
@@ -57,9 +59,10 @@ pub fn frame(title: &str, rows: &[String], footer: &str, width: usize, height: u
         output.push_str(&clip(&rows[0], width));
         output.push('\n');
         let tail = available - 2;
-        output.push_str(&clip(&format!(
-            "... {} earlier rows hidden", rows.len() - tail - 1
-        ), width));
+        output.push_str(&clip(
+            &format!("... {} earlier rows hidden", rows.len() - tail - 1),
+            width,
+        ));
         output.push('\n');
         for row in rows.iter().skip(rows.len() - tail) {
             output.push_str(&clip(row, width));
@@ -101,7 +104,9 @@ impl Screen {
     pub fn show(&self, label: &str, graph: &str, stats: &crate::stats::Stats) {
         let sent = stats.sent;
         let received = stats.received;
-        let loss = if sent == 0 { 0.0 } else {
+        let loss = if sent == 0 {
+            0.0
+        } else {
             100.0 * sent.saturating_sub(received) as f64 / sent as f64
         };
         let (width, height) = dimensions();
@@ -109,18 +114,30 @@ impl Screen {
         let visible = height.saturating_sub(5);
         let mut rows = vec![format!(
             "Sent {:>6}  Rx {:>6}  Loss {:>5.1}%  |  last {} graph buckets",
-            sent, received, loss, graph_lines.len()
+            sent,
+            received,
+            loss,
+            graph_lines.len()
         )];
         rows.push(if received == 0 {
             "RTT waiting for first valid reply".to_owned()
         } else {
             format!(
                 "RTT min {:.2}  avg {:.2}  max {:.2}  p95 {:.2}  jitter {:.2} ms",
-                stats.min, stats.mean, stats.max, stats.percentile(0.95), stats.jitter()
+                stats.min,
+                stats.mean,
+                stats.max,
+                stats.percentile(0.95),
+                stats.jitter()
             )
         });
         rows.push("RTT distribution (older -> newer):".to_owned());
-        rows.extend(graph_lines.iter().skip(graph_lines.len().saturating_sub(visible)).cloned());
+        rows.extend(
+            graph_lines
+                .iter()
+                .skip(graph_lines.len().saturating_sub(visible))
+                .cloned(),
+        );
         let data = frame(
             &format!("pipi | PING {}", label),
             &rows,
@@ -146,7 +163,9 @@ mod tests {
 
     #[test]
     fn viewport_40_by_12_and_80_by_24_never_overflow() {
-        let lines: Vec<_> = (0..80).map(|i| format!("line {i:03} - {}", "x".repeat(300))).collect();
+        let lines: Vec<_> = (0..80)
+            .map(|i| format!("line {i:03} - {}", "x".repeat(300)))
+            .collect();
         for (width, height) in [(40, 12), (80, 24), (120, 40), (20, 6)] {
             let f = frame("network \x1b[31m title", &lines, "Ctrl-C", width, height);
             assert!(f.lines().count() <= height);

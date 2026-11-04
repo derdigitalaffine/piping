@@ -45,38 +45,60 @@ fn help() -> &'static str {
 }
 
 fn parse(args: &[String]) -> Result<Option<Options>, String> {
-    if args.iter().any(|arg| matches!(arg.as_str(), "--help" | "-h")) {
+    if args
+        .iter()
+        .any(|arg| matches!(arg.as_str(), "--help" | "-h"))
+    {
         return Ok(None);
     }
     let mut options = Options {
-        target: String::new(), family: None, cycles: None, hops: 16,
+        target: String::new(),
+        family: None,
+        cycles: None,
+        hops: 16,
         timeout: Duration::from_millis(500),
         interval: Duration::from_millis(100),
-        smoke: false, ascii: false, tui: false,
+        smoke: false,
+        ascii: false,
+        tui: false,
     };
     let mut i = 0;
     while i < args.len() {
         match args[i].as_str() {
             "-4" => {
-                if options.family == Some(true) { return Err("-4 conflicts with -6".into()); }
+                if options.family == Some(true) {
+                    return Err("-4 conflicts with -6".into());
+                }
                 options.family = Some(false);
             }
             "-6" => {
-                if options.family == Some(false) { return Err("-6 conflicts with -4".into()); }
+                if options.family == Some(false) {
+                    return Err("-6 conflicts with -4".into());
+                }
                 options.family = Some(true);
             }
             "-c" | "--count" => {
                 i += 1;
-                let n: u32 = args.get(i).ok_or("--count needs a value")?
-                    .parse().map_err(|_| "invalid --count")?;
-                if !(1..=1000).contains(&n) { return Err("--count must be 1..=1000".into()); }
+                let n: u32 = args
+                    .get(i)
+                    .ok_or("--count needs a value")?
+                    .parse()
+                    .map_err(|_| "invalid --count")?;
+                if !(1..=1000).contains(&n) {
+                    return Err("--count must be 1..=1000".into());
+                }
                 options.cycles = Some(n);
             }
             "--max-hops" => {
                 i += 1;
-                let n: u8 = args.get(i).ok_or("--max-hops needs a value")?
-                    .parse().map_err(|_| "invalid --max-hops")?;
-                if !(1..=32).contains(&n) { return Err("--max-hops must be 1..=32".into()); }
+                let n: u8 = args
+                    .get(i)
+                    .ok_or("--max-hops needs a value")?
+                    .parse()
+                    .map_err(|_| "invalid --max-hops")?;
+                if !(1..=32).contains(&n) {
+                    return Err("--max-hops must be 1..=32".into());
+                }
                 options.hops = n;
             }
             "-W" | "--timeout" => {
@@ -86,9 +108,17 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
                 options.interval = seconds(args, &mut i, "--interval", 0.05, 5.0)?;
             }
             "--smoke" => options.smoke = true,
-            "--ascii" => { options.ascii = true; options.smoke = true; }
-            "--tui" => { options.tui = true; options.smoke = true; }
-            other if other.starts_with('-') => return Err(format!("unknown trace option: {other}")),
+            "--ascii" => {
+                options.ascii = true;
+                options.smoke = true;
+            }
+            "--tui" => {
+                options.tui = true;
+                options.smoke = true;
+            }
+            other if other.starts_with('-') => {
+                return Err(format!("unknown trace option: {other}"));
+            }
             other if options.target.is_empty() => options.target = other.to_owned(),
             other => return Err(format!("unexpected trace argument: {other}")),
         }
@@ -101,11 +131,18 @@ fn parse(args: &[String]) -> Result<Option<Options>, String> {
 }
 
 fn seconds(
-    args: &[String], i: &mut usize, flag: &str, min: f64, max: f64,
+    args: &[String],
+    i: &mut usize,
+    flag: &str,
+    min: f64,
+    max: f64,
 ) -> Result<Duration, String> {
     *i += 1;
-    let n: f64 = args.get(*i).ok_or_else(|| format!("{flag} needs a value"))?
-        .parse().map_err(|_| format!("invalid {flag}"))?;
+    let n: f64 = args
+        .get(*i)
+        .ok_or_else(|| format!("{flag} needs a value"))?
+        .parse()
+        .map_err(|_| format!("invalid {flag}"))?;
     if !n.is_finite() || !(min..=max).contains(&n) {
         return Err(format!("{flag} must be {min}..={max} seconds"));
     }
@@ -120,7 +157,11 @@ struct Hop {
 
 impl Default for Hop {
     fn default() -> Self {
-        Self { ip: None, stats: Stats::for_sweep(), recent: VecDeque::new() }
+        Self {
+            ip: None,
+            stats: Stats::for_sweep(),
+            recent: VecDeque::new(),
+        }
     }
 }
 
@@ -144,9 +185,7 @@ enum Outcome {
 }
 
 fn correlated(id: ProbeId, seq: u16, nonce: u64, token: u64) -> bool {
-    id.seq == seq
-        && id.nonce.is_none_or(|n| n == nonce)
-        && id.token.is_none_or(|t| t == token)
+    id.seq == seq && id.nonce.is_none_or(|n| n == nonce) && id.token.is_none_or(|t| t == token)
 }
 
 fn match_error(error: &ErrorReply, target: IpAddr, seq: u16, nonce: u64, token: u64) -> bool {
@@ -154,8 +193,13 @@ fn match_error(error: &ErrorReply, target: IpAddr, seq: u16, nonce: u64, token: 
 }
 
 fn probe(
-    sock: &TraceSocket, target: SocketAddr, packet: &mut [u8],
-    hop: u8, nonce: u64, token: u64, timeout: Duration,
+    sock: &TraceSocket,
+    target: SocketAddr,
+    packet: &mut [u8],
+    hop: u8,
+    nonce: u64,
+    token: u64,
+    timeout: Duration,
 ) -> Result<Outcome, String> {
     let seq = token as u16;
     linux::write_echo_request(packet, target.is_ipv6(), seq, nonce, token);
@@ -164,10 +208,15 @@ fn probe(
         .map_err(|e| format!("trace ICMP send (TTL={hop}): {e}"))?;
     let deadline = start + timeout;
     loop {
-        if crate::engine::interrupted() { return Ok(Outcome::NoResponse); }
+        if crate::engine::interrupted() {
+            return Ok(Outcome::NoResponse);
+        }
         // Linux reports IPv4 Time Exceeded and Unreachable via MSG_ERRQUEUE.
         for _ in 0..32 {
-            match sock.recv_error().map_err(|e| format!("trace error queue: {e}"))? {
+            match sock
+                .recv_error()
+                .map_err(|e| format!("trace error queue: {e}"))?
+            {
                 Some(error) if match_error(&error, target.ip(), seq, nonce, token) => {
                     let rtt = start.elapsed().as_secs_f64() * 1000.0;
                     return Ok(match error.kind {
@@ -180,11 +229,15 @@ fn probe(
             }
         }
         for _ in 0..32 {
-            match sock.recv_echo().map_err(|e| format!("trace ICMP receive: {e}"))? {
-                Some(reply) if reply.source == target.ip()
-                    && reply.echo.seq == seq
-                    && reply.echo.nonce == nonce
-                    && reply.echo.token == token =>
+            match sock
+                .recv_echo()
+                .map_err(|e| format!("trace ICMP receive: {e}"))?
+            {
+                Some(reply)
+                    if reply.source == target.ip()
+                        && reply.echo.seq == seq
+                        && reply.echo.nonce == nonce
+                        && reply.echo.token == token =>
                 {
                     return Ok(Outcome::Reached(start.elapsed().as_secs_f64() * 1000.0));
                 }
@@ -193,9 +246,15 @@ fn probe(
             }
         }
         let now = Instant::now();
-        if now >= deadline { return Ok(Outcome::NoResponse); }
-        sock.wait(deadline.saturating_duration_since(now).min(Duration::from_millis(250)))
-            .map_err(|e| format!("trace poll: {e}"))?;
+        if now >= deadline {
+            return Ok(Outcome::NoResponse);
+        }
+        sock.wait(
+            deadline
+                .saturating_duration_since(now)
+                .min(Duration::from_millis(250)),
+        )
+        .map_err(|e| format!("trace poll: {e}"))?;
     }
 }
 
@@ -206,35 +265,72 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
         for (i, hop) in hops.iter().enumerate() {
             let addr = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
             let addr: String = addr.chars().take(11).collect();
-            let last = hop.recent.back().copied().flatten()
+            let last = hop
+                .recent
+                .back()
+                .copied()
+                .flatten()
                 .map_or_else(|| "-".to_owned(), |v| format!("{v:.1}"));
             let prefix = format!(
                 "{:>2}  {:<11} {:>4.0}% {:>6}",
-                i + 1, addr, hop.stats.loss_percent(), last
+                i + 1,
+                addr,
+                hop.stats.loss_percent(),
+                last
             );
             let budget = width.saturating_sub(prefix.chars().count() + 2);
-            out.push(format!("{prefix} {}", if smoke {
-                graph::sparkline(&hop.recent, budget, ascii)
-            } else { String::new() }));
+            out.push(format!(
+                "{prefix} {}",
+                if smoke {
+                    graph::sparkline(&hop.recent, budget, ascii)
+                } else {
+                    String::new()
+                }
+            ));
         }
         return out;
     }
     if smoke {
-        out.push("HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST  SMOKE".into());
+        out.push(
+            "HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST  SMOKE".into(),
+        );
     } else {
         out.push("HOP  ADDRESS               LOSS%  SENT  LAST   AVG    BEST   WORST".into());
     }
     for (i, hop) in hops.iter().enumerate() {
         let addr = hop.ip.map_or_else(|| "*".to_owned(), |ip| ip.to_string());
-        let last = hop.recent.back().copied().flatten()
+        let last = hop
+            .recent
+            .back()
+            .copied()
+            .flatten()
             .map_or_else(|| "-".to_owned(), |v| format!("{v:.1}"));
         let stats = &hop.stats;
-        let best = if stats.received == 0 { "-".to_owned() } else { format!("{:.1}", stats.min) };
-        let worst = if stats.received == 0 { "-".to_owned() } else { format!("{:.1}", stats.max) };
-        let avg = if stats.received == 0 { "-".to_owned() } else { format!("{:.1}", stats.mean) };
+        let best = if stats.received == 0 {
+            "-".to_owned()
+        } else {
+            format!("{:.1}", stats.min)
+        };
+        let worst = if stats.received == 0 {
+            "-".to_owned()
+        } else {
+            format!("{:.1}", stats.max)
+        };
+        let avg = if stats.received == 0 {
+            "-".to_owned()
+        } else {
+            format!("{:.1}", stats.mean)
+        };
         let mut line = format!(
             "{:>2}   {:<21} {:>5.1}  {:>4} {:>6} {:>6} {:>6} {:>6}",
-            i + 1, addr, stats.loss_percent(), stats.sent, last, avg, best, worst,
+            i + 1,
+            addr,
+            stats.loss_percent(),
+            stats.sent,
+            last,
+            avg,
+            best,
+            worst,
         );
         if smoke {
             let used = line.chars().count();
@@ -248,7 +344,9 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
 }
 
 fn text_cycle(hops: &[Hop], cycle: u32, dest: IpAddr, smoke: bool, ascii: bool) {
-    crate::engine::emit(&format!("pipi trace {dest} | cycle {cycle} | hop stats (ICMP)"));
+    crate::engine::emit(&format!(
+        "pipi trace {dest} | cycle {cycle} | hop stats (ICMP)"
+    ));
     for row in render_rows(hops, smoke, ascii, 110) {
         crate::engine::emit(&row);
     }
@@ -272,20 +370,29 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     let mut reached = false;
     let mut cycle = 0_u32;
     #[cfg(feature = "tui")]
-    let screen = if options.tui { Some(crate::tui::Screen::enter()?) } else { None };
+    let screen = if options.tui {
+        Some(crate::tui::Screen::enter()?)
+    } else {
+        None
+    };
     let mut next_send = Instant::now();
     while !crate::engine::interrupted() && options.cycles.is_none_or(|n| cycle < n) {
         cycle += 1;
         for ttl in 1..=options.hops {
-            if crate::engine::interrupted() { break; }
+            if crate::engine::interrupted() {
+                break;
+            }
             // Keep Ctrl-C responsive even if a user selects a five-second interval.
             while Instant::now() < next_send && !crate::engine::interrupted() {
                 std::thread::sleep(
-                    next_send.saturating_duration_since(Instant::now())
+                    next_send
+                        .saturating_duration_since(Instant::now())
                         .min(Duration::from_millis(50)),
                 );
             }
-            if crate::engine::interrupted() { break; }
+            if crate::engine::interrupted() {
+                break;
+            }
             next_send = Instant::now() + options.interval;
             let index = usize::from(ttl - 1);
             hops[index].stats.on_send();
@@ -318,13 +425,20 @@ pub fn run(args: &[String]) -> Result<i32, String> {
                 let width = crate::tui::dimensions().0;
                 let rows = render_rows(&hops[..usize::from(ttl)], true, options.ascii, width);
                 screen.show_lines(
-                    &format!("pipi TRACE {}  | cycle {}  | hop {}/{}",
-                        cli::visible_host(&options.target), cycle, ttl, options.hops),
+                    &format!(
+                        "pipi TRACE {}  | cycle {}  | hop {}/{}",
+                        cli::visible_host(&options.target),
+                        cycle,
+                        ttl,
+                        options.hops
+                    ),
                     &rows,
                     "MTR-style | X=timeout | Ctrl-C exit | local ICMP errors",
                 );
             }
-            if terminal { break; }
+            if terminal {
+                break;
+            }
         }
         if !options.tui {
             text_cycle(&hops, cycle, target.ip(), options.smoke, options.ascii);
@@ -346,7 +460,12 @@ mod tests {
         assert!(parse(&["--max-hops".into(), "33".into(), "x".into()]).is_err());
         assert!(parse(&["--count".into(), "0".into(), "x".into()]).is_err());
         assert!(parse(&["--timeout".into(), "nan".into(), "x".into()]).is_err());
-        assert!(parse(&["--tui".into(), "--smoke".into(), "127.0.0.1".into()]).unwrap().unwrap().tui);
+        assert!(
+            parse(&["--tui".into(), "--smoke".into(), "127.0.0.1".into()])
+                .unwrap()
+                .unwrap()
+                .tui
+        );
     }
 
     #[test]
@@ -361,7 +480,9 @@ mod tests {
         let lines = render_rows(&hops, true, true, 110);
         assert!(lines[1].contains("50.0"));
         assert!(lines[1].contains("X"));
-        for _ in 0..100 { hops[0].sample(None); }
+        for _ in 0..100 {
+            hops[0].sample(None);
+        }
         assert_eq!(hops[0].recent.len(), HISTORY);
     }
 
@@ -370,8 +491,13 @@ mod tests {
         let target: IpAddr = "127.0.0.1".parse().unwrap();
         let error = ErrorReply {
             destination: target,
-            router: target, kind: ErrorKind::Expired,
-            id: ProbeId { seq: 4, nonce: Some(44), token: Some(4) },
+            router: target,
+            kind: ErrorKind::Expired,
+            id: ProbeId {
+                seq: 4,
+                nonce: Some(44),
+                token: Some(4),
+            },
         };
         assert!(match_error(&error, target, 4, 44, 4));
         assert!(!match_error(&error, target, 5, 44, 4));

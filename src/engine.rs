@@ -491,7 +491,9 @@ pub fn run(config: Config) -> Result<i32, String> {
             event_timeout(&config, &targets[probe.target], probe.seq);
             note_recent(&mut recent, *id, probe.target, false);
             if config.mode == Mode::Range
-                && config.count.is_some_and(|limit| targets[probe.target].sent < limit)
+                && config
+                    .count
+                    .is_some_and(|limit| targets[probe.target].sent < limit)
             {
                 ready.push_back(probe.target);
             }
@@ -525,7 +527,12 @@ pub fn run(config: Config) -> Result<i32, String> {
             break;
         }
         let candidate = if now >= next_send && pending.len() < config.jobs {
-            select_target(&targets, &mut ready, config.count, config.mode == Mode::Range)
+            select_target(
+                &targets,
+                &mut ready,
+                config.count,
+                config.mode == Mode::Range,
+            )
         } else {
             None
         };

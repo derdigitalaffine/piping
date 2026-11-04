@@ -73,7 +73,15 @@ fn discovery_invalid_flags_fail_without_network_packets() {
     for args in [
         vec!["discover", "--active", "10.0.0.0/24"],
         vec!["discover", "--active", "10.0.0.1", "-i", "eth0"],
-        vec!["discover", "--active", "10.0.0.0/24", "-i", "eth0", "--pps", "101"],
+        vec![
+            "discover",
+            "--active",
+            "10.0.0.0/24",
+            "-i",
+            "eth0",
+            "--pps",
+            "101",
+        ],
         vec!["discover", "--interface", "../evil"],
         vec!["discover", "--max-results", "4097"],
     ] {
@@ -92,7 +100,10 @@ fn trace_and_neighborhood_help_without_sockets() {
         assert!(text.contains("--tui"));
     }
     assert_eq!(pipi(&["trace"]).status.code(), Some(2));
-    assert_eq!(pipi(&["neighborhood", "--watch", "1"]).status.code(), Some(2));
+    assert_eq!(
+        pipi(&["neighborhood", "--watch", "1"]).status.code(),
+        Some(2)
+    );
 }
 
 #[test]
@@ -104,7 +115,15 @@ fn trace_and_neighborhood_validate_hard_limits_without_network() {
         vec!["trace", "-4", "-6", "127.0.0.1"],
         vec!["neighborhood", "--max-results", "10000"],
         vec!["neighborhood", "--active", "10.0.0.0/24"],
-        vec!["neighborhood", "--active", "10.0.0.0/24", "-i", "eth0", "--watch", "2"],
+        vec![
+            "neighborhood",
+            "--active",
+            "10.0.0.0/24",
+            "-i",
+            "eth0",
+            "--watch",
+            "2",
+        ],
     ] {
         assert_eq!(pipi(&args).status.code(), Some(2), "{args:?}");
     }
