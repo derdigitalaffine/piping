@@ -1,12 +1,12 @@
 # Entwicklung und Reproduzierbarkeit
 
-> **Planungsstand:** In `main` existieren zunächst Dokumentation und Issues; Cargo-Dateien sowie Rust-Code gehören zu #1 und Folge-Issues. Unten sind die **später verbindlichen** Befehle, keine bereits ausgeführten Prüfungen.
+> **Implementierungsstand 04.11.2026:** Quellcode und CI liegen bereits auf `main`. Für jeden Branch gelten die Befehle unten. Nachweislich erfolgreiche Rust-1.85-/Stable-Runs und offene Restrisiken siehe [QA-Bericht](QA_REPORT.md).
 
 ## Voraussetzungen
 
 Linux x86_64, stable Rust per rustup, Cargo, Git. Rust-Edition 2024, MSRV im Foundation-Issue definieren. Für ICMP-Loopback-Integration passende Socket-Rechte. Keine Docker-Pflicht für Kernentwicklung.
 
-## Sobald Cargo-Projekt vorhanden
+## Reproduzierbarer Linux-Build aus Checkout
 
 ```sh
 cargo fmt --all -- --check
@@ -19,7 +19,7 @@ cargo build --release --locked --no-default-features
 ./target/release/piping -6 -c 3 ::1
 ```
 
-Die letzten zwei Kommandos benötigen passende Linux-Ping-Sockets. Kein Test darf ohne tatsächlichen Lauf als bestanden erfasst werden; wenn ICMP gesperrt ist, kennzeichnen `SKIP: EPERM/ping_group_range` statt Fake-Grün.
+Die letzten zwei Kommandos benötigen passende Linux-Ping-Sockets. CI prüft außerdem `cargo install --locked --path .` in einem isolierten `CARGO_TARGET_DIR` und führt das installierte Binary auf Loopback aus. Kein Test darf ohne tatsächlichen Lauf als bestanden erfasst werden; wenn ICMP gesperrt ist, kennzeichnen `SKIP: EPERM/ping_group_range` statt Fake-Grün.
 
 ## Tests
 

@@ -2,7 +2,7 @@
 
 **piping** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat im [PR #18](https://github.com/derdigitalaffine/piping/pull/18).** Der [CI-Lauf #41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384) bestätigt 24 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben.
+> **Status (04.11.2026): Linux-x86_64-geprüfter Rust-v0.1-Kandidat im [PR #18](https://github.com/derdigitalaffine/piping/pull/18).** Der [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) bestätigt 26 Unit- + 4 CLI-Tests, fmt/clippy, Builds inklusive Rust 1.85, 11 Linux-Loopback-Checks und einen begrenzten 100-PPS-Benchmark. Die verbleibenden Release-Gates stehen im [QA-Bericht](docs/QA_REPORT.md); ein öffentliches Produktionsrelease ist noch nicht freigegeben.
 
 ## Benutzbare CLI im Entwicklungsbranch
 
@@ -33,6 +33,8 @@ cargo install --path . --locked
 cargo build --release --locked --features tui
 ./target/release/piping tui ::1
 ```
+
+DNS-Auflösung wird auf fünf Sekunden begrenzt; JSONL/CSV enthalten UTC-Epoch-Millisekunden. Die CI prüft zusätzlich `cargo install` aus einem unabhängigen Build-Verzeichnis.
 
 Linux-ICMP-Echo-Sockets können ohne Root funktionieren, wenn die Systemkonfiguration dies erlaubt. Das Programm verändert nie automatisch `sysctl`-Werte, fordert keine pauschalen Root-Rechte und führt keine ungefragten Scans aus. Näheres in [Sicherheit](docs/SECURITY.md) und der [CLI-Referenz](docs/CLI.md).
 

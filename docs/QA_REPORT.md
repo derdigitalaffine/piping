@@ -4,15 +4,15 @@ Stand: **04.11.2026**, Kandidat `v0.1.0` auf [PR #18](https://github.com/derdigi
 
 ## Nachweislich erfolgreiche Linux-CI-Prüfungen
 
-[GitHub-Actions-Lauf #41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384), Commit `3098fdbba6b3f174b1dedeafb916843dfc36d7de`, Resultat **success** (beide Jobs).
+[GitHub-Actions-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867), Commit `997606d2cd2ced6548474dc8d1cf95cbdc757099`, Resultat **success** (beide Jobs).
 
-- Rust Stable auf Ubuntu x86_64: `cargo test --locked --all-features` → **24 Unit-Tests und 4 CLI-Tests bestanden**.
+- Rust Stable auf Ubuntu x86_64: `cargo test --locked --all-features` → **26 Unit-Tests und 4 CLI-Tests bestanden**.
 - `cargo fmt --all -- --check` und `cargo clippy --locked --all-targets --all-features -- -D warnings` → bestanden.
 - `cargo build --release --locked --no-default-features` und `--all-features` → bestanden.
 - Rust **1.85.0**: separater MSRV-Job mit Tests und Release-Build `--no-default-features` → bestanden.
 - `tests/linux_smoke.sh`: **11/11 PASS**, **0 SKIP, 0 FAIL**. Linux CI host erlaubte Datagrams nach einer explizit auf den ephemeren Runner beschränkten `ping_group_range`-Einstellung. Die Anwendung selbst ändert kein `sysctl` und verwendet keine erhöhten Rechte.
 - Laufzeit-Smoketests: ICMPv4 `127.0.0.1` (3/3), ICMPv6 `::1` (3/3), Fast Ping (5/5), Range IPv4 `127.0.0.1/32` (1/1), Monitor-Smoke-Grafik (9/9), JSONL (2/2 + validiertes JSON), CSV (2/2 + CSV-Schema), SIGINT-Abschluss, Broken-Pipe, Fullscreen-TUI im Pseudo-Terminal mit Alternate-Screen-Restore, Fehlerpfad ohne TTY.
-- `tests/benchmark_loopback.sh`: **201/201** IPv4-Loopback-Replies mit `--pps 100`, **2013 ms** externe Laufzeit, `/usr/bin/time` **2.00 s**, **9 % CPU**, **2292 KB max RSS** auf dem Runner (Linux **7.0.0-1017-azure**, x86_64). Das ist *eine* reproduzierbare Loopback-Messung, kein Vergleich zu `fping` und keine Performance-Garantie.
+- `tests/benchmark_loopback.sh`: **201/201** IPv4-Loopback-Replies mit `--pps 100`, **2013 ms** externe Laufzeit, `/usr/bin/time` **2.00 s**, **9 % CPU**, **2220 KB max RSS** auf dem Runner (Linux **7.0.0-1017-azure**, x86_64). Das ist *eine* reproduzierbare Loopback-Messung, kein Vergleich zu `fping` und keine Performance-Garantie.
 
 ## Testmatrix gegenüber `docs/ACCEPTANCE_TESTS.md`
 
@@ -33,7 +33,15 @@ Stand: **04.11.2026**, Kandidat `v0.1.0` auf [PR #18](https://github.com/derdigi
 | A18 | PASS | Echo über reale Linux ICMPv6 Ping-Sockets, Kernel-Checksum-Pfad |
 | A19, A20 | PASS | JSONL/CSV und TUI-Minimal-/Feature-/Pseudo-TTY-Restore getestet |
 | A21 | TEILWEISE | CLI-Bounds, begrenzte Stats-Reservoirgröße und PPS gemessen; Queue-Stresstest offen |
-| A22 | TEILWEISE | frischer CI-Checkout baut; unabhängige VM-Installation / aarch64 offen |
+| A22 | TEILWEISE | frischer CI-Checkout mit isoliertem `cargo install --path . --locked`, `--help`, `--version` und echtem IPv4-Echo als installiertes Binary geprüft; unabhängige VM-Installation / aarch64 offen |
+
+## Nachgehärtete v0.1-Tests
+
+- DNS-Auflösung aus Hostnamen hat eine feste **5-Sekunden-Deadline**; numerische IP-Adressen umgehen DNS. Der Timeout-Test simuliert einen blockierenden Resolver ohne externe Netzwerkverbindungen.
+- Streaming JSONL und CSV haben `timestamp_unix_ms` als UTC-Epoch-Zeitstempel; die echte Loopback-Suite validiert die Felder.
+- Die Quelle wurde auf demselben CI-Runner zusätzlich mit isoliertem `CARGO_TARGET_DIR` installiert, `--help`/`--version` und `-4 -c 2 127.0.0.1` wurden unter dem installierten Pfad erfolgreich ausgeführt.
+- Zwei neue Rust-Tests (DNS Numeric/Familie, Resolver-Deadline) erhöhen die Anzahl auf **26 Unit- + 4 CLI-Tests**. Die Paket-/Duplikat-Regressionstests sind weiterhin aktiv.
+- Compiler-/Installationsjobs sind voneinander isoliert, damit eine No-Feature-Installation das mit `tui` gebaute Binary nicht überschreibt.
 
 ## Release-Artefakte
 
@@ -41,7 +49,7 @@ Beide x86_64-Varianten und SHA256-Datei werden in CI lokal erzeugt. GitHub `uplo
 
 ## Freigabe und Restrisiken
 
-**Status: Linux x86_64 funktions- und CI-geprüfter v0.1-Kandidat, nicht als systemweit produktionsfertig freigegeben.** Noch erforderlich für eine belastbare öffentliche Release-Freigabe: negative/überlastete Deadline- und Rate-Tests mit Mock-Clock, Container/Namespace-Rechte-Regressionen, mindestens eine unabhängige Linux-VM/Installation, Freigabe des `unsafe`-Socket-FFI und Lizenz-/Distributionentscheidung. Eine aarch64-Zielarchitektur ist bisher nicht getestet. TUI ist optional und bewusst minimal, nicht vollständig interaktiv.
+**Status: Linux x86_64 funktions-, install- und CI-geprüfter v0.1-Kandidat, aber kein öffentlich signierter Binärrelease oder unabhängiger Security-Audit.** Noch erforderlich für eine belastbare öffentliche Release-Freigabe: negative/überlastete Deadline- und Rate-Tests mit Mock-Clock, Container/Namespace-Rechte-Regressionen, mindestens eine unabhängige Linux-VM/Installation, Freigabe des `unsafe`-Socket-FFI und Lizenz-/Distributionentscheidung. Eine aarch64-Zielarchitektur ist bisher nicht getestet. TUI ist optional und bewusst minimal, nicht vollständig interaktiv.
 
 Keine automatischen Issue-Schließungen allein wegen vorhandenem Code. Verbindliche Testbefehle:
 

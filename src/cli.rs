@@ -2,7 +2,7 @@
 //! subset of iputils ping, not a drop-in clone.
 
 use std::fmt;
-use std::net::{SocketAddr, ToSocketAddrs};
+use std::net::{IpAddr, SocketAddr, ToSocketAddrs};
 use std::time::Duration;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -286,10 +286,51 @@ pub fn parse(args: &[String]) -> Result<Parsed, CliError> {
     }))
 }
 
+/// Run potentially blocking system DNS resolution under a fixed deadline.
+/// The resolver thread is intentionally detached on timeout: the CLI exits on error,
+/// and never blocks the main process indefinitely on an unresponsive NSS backend.
+fn with_deadline<T, F>(timeout: Duration, task: F) -> Result<T, CliError>
+where
+    T: Send + 'static,
+    F: FnOnce() -> Result<T, CliError> + Send + 'static,
+{
+    use std::sync::mpsc::{self, RecvTimeoutError};
+    let (tx, rx) = mpsc::sync_channel(1);
+    std::thread::Builder::new()
+        .name("piping-dns-resolver".into())
+        .spawn(move || {
+            let _ = tx.send(task());
+        })
+        .map_err(|e| CliError(format!("cannot start resolver thread: {e}")))?;
+    match rx.recv_timeout(timeout) {
+        Ok(result) => result,
+        Err(RecvTimeoutError::Timeout) => Err(CliError(format!(
+            "DNS resolution timed out after {:.0} seconds",
+            timeout.as_secs_f64()
+        ))),
+        Err(RecvTimeoutError::Disconnected) => Err(CliError(
+            "DNS resolver thread terminated unexpectedly".into(),
+        )),
+    }
+}
+
 pub fn resolve(host: &str, family: Option<bool>) -> Result<SocketAddr, CliError> {
-    let addresses = (host, 0_u16)
-        .to_socket_addrs()
-        .map_err(|e| CliError(format!("cannot resolve {host}: {e}")))?;
+    if let Ok(ip) = host.parse::<IpAddr>() {
+        if family.is_some_and(|v6| v6 != ip.is_ipv6()) {
+            return Err(CliError(format!(
+                "no matching IP family for {}",
+                visible_host(host)
+            )));
+        }
+        return Ok(SocketAddr::new(ip, 0));
+    }
+    let target = host.to_owned();
+    let addresses = with_deadline(Duration::from_secs(5), move || {
+        (target.as_str(), 0_u16)
+            .to_socket_addrs()
+            .map(|iter| iter.collect::<Vec<_>>())
+            .map_err(|e| CliError(format!("cannot resolve {}: {e}", visible_host(&target))))
+    })?;
     let mut first = None;
     for addr in addresses {
         if family.is_some_and(|v6| v6 != addr.is_ipv6()) {
@@ -298,12 +339,11 @@ pub fn resolve(host: &str, family: Option<bool>) -> Result<SocketAddr, CliError>
         if first.is_none() {
             first = Some(addr);
         }
-        // Prefer IPv4 for compatibility when both families exist and no override.
         if family.is_none() && addr.is_ipv4() {
             return Ok(addr);
         }
     }
-    first.ok_or_else(|| CliError(format!("no matching IP address for {host}")))
+    first.ok_or_else(|| CliError(format!("no matching IP address for {}", visible_host(host))))
 }
 
 pub fn help() -> &'static str {
@@ -403,6 +443,22 @@ mod tests {
             parse(&args(&["fast", "--version"])),
             Ok(Parsed::Version)
         ));
+    }
+
+    #[test]
+    fn numeric_ip_bypasses_dns_and_obeys_family() {
+        assert!(resolve("127.0.0.1", Some(false)).unwrap().is_ipv4());
+        assert!(resolve("::1", Some(true)).unwrap().is_ipv6());
+        assert!(resolve("::1", Some(false)).is_err());
+    }
+
+    #[test]
+    fn bounded_resolver_is_not_stalled_by_slow_nss() {
+        let result: Result<u32, CliError> = with_deadline(Duration::from_millis(10), || {
+            std::thread::sleep(Duration::from_millis(50));
+            Ok(7)
+        });
+        assert!(result.unwrap_err().to_string().contains("timed out"));
     }
 
     #[test]

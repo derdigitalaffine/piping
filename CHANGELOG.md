@@ -8,7 +8,9 @@
 - Explicit `range` CIDR and inclusive IPv4 endpoint sweep, target caps and alive/down summary.
 - Smoke-style rolling RTT median, spread/p95, counted losses and pending probes as ASCII/Unicode console output.
 - Optional Fullscreen TUI with alternate-screen restoration; classic and monitor remain TUI-independent.
-- Streaming JSONL/CSV outputs, script-friendly exit codes, signal termination and broken-pipe handling.
+- Streaming JSONL/CSV outputs with UTC epoch-millisecond timestamps, script-friendly exit codes, signal termination and broken-pipe handling.
+- Five-second upper bound on hostname resolution and a fast numeric-IP path.
+- CI source installation with isolated build target and installed-binary loopback smoke.
 - Linux CI with stable+Rust1.85 tests, fmt, clippy, two release builds, actual IPv4/IPv6 loopback, protocol fixtures and bounded performance benchmark.
 
 Pre-release candidate; see [QA report](docs/QA_REPORT.md) for passed tests and outstanding release gates.

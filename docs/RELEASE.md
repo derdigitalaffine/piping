@@ -2,7 +2,7 @@
 
 ## Preconditions
 
-Linux CI, Rust 1.85 builds and live IPv4/IPv6 loopback checks are passing as of run [#41805747384](https://github.com/derdigitalaffine/piping/actions/runs/41805747384). Release only after remaining QA restrictions and unsafe FFI review are cleared, an independent Linux installation has been checked, and the decision is recorded in `docs/QA_REPORT.md`.
+Linux CI, Rust 1.85 builds, source installation and real IPv4/IPv6 loopback checks are passing as of run [#41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867). Release only after remaining QA restrictions and unsafe FFI review are cleared, an independent Linux installation has been checked, and the decision is recorded in `docs/QA_REPORT.md`.
 
 ## Source build
 

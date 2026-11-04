@@ -45,13 +45,13 @@ A bucket groups probes sent in a one-second window. The graph shows median as `*
 
 ## Machine-readable output
 
-`--output jsonl` emits `schema:1` reply, timeout and per-target summary objects. `--output csv` uses columns `event,target,ip,seq,rtt_ms,sent,received,loss_pct`. String fields are escaped, and neither format uses ANSI sequences. The program flushes output incrementally and treats closed pipes as normal termination.
+`--output jsonl` emits `schema:1` reply, timeout and per-target summary objects with UTC epoch milliseconds in `timestamp_unix_ms`. `--output csv` uses columns `event,target,ip,seq,rtt_ms,sent,received,loss_pct,timestamp_unix_ms`. String fields are escaped, and neither format uses ANSI sequences. The program flushes output incrementally and treats closed pipes as normal termination.
 
 ## Limitations
 
 - Deliberate subset of iputils ping, not a drop-in implementation of its full options/error formats.
 - Linux SOCK_DGRAM ICMP sockets only; the kernel manages Echo ID and validates checksums. No automatic privileged Raw-Socket fallback.
 - The **outbound** TTL/hop limit is configurable; received-packet TTL/hop limit is not displayed because ancillary data retrieval is not implemented.
-- Hostname resolution uses the system resolver; DNS time is not bounded by the per-probe timeout.
+- Hostname resolution uses the system resolver under a five-second timeout (numeric IPv4/IPv6 addresses bypass DNS). This deadline is separate from the per-probe ICMP timeout. A stalled NSS thread may remain until process exit.
 - Percentiles for long-running sessions summarize a bounded rolling sample of the latest 2048 RTT values; min/avg/max/mdev cover all accepted replies.
 - The lightweight optional TUI is an alternate-screen presentation with Ctrl-C exit, not a full keybinding-driven curses application.
