@@ -18,7 +18,11 @@ fn help_and_version_require_no_sockets() {
 
     let version = piping(&["--version"]);
     assert!(version.status.success());
-    assert!(String::from_utf8(version.stdout).unwrap().starts_with("piping "));
+    assert!(
+        String::from_utf8(version.stdout)
+            .unwrap()
+            .starts_with("piping ")
+    );
 }
 
 #[test]
@@ -41,7 +45,11 @@ fn argument_errors_have_exit_code_2() {
 fn no_implicit_fullscreen_ui() {
     let result = piping(&["tui", "--help"]);
     assert!(result.status.success());
-    assert!(!String::from_utf8(result.stdout).unwrap().contains("\x1b[?1049h"));
+    assert!(
+        !String::from_utf8(result.stdout)
+            .unwrap()
+            .contains("\x1b[?1049h")
+    );
 }
 
 #[test]

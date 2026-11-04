@@ -174,13 +174,16 @@ fn send_one(
         .map_err(|e| format!("send ICMP echo to {}: {e}", target.addr.ip()))?;
     let now = Instant::now();
     let second = now.duration_since(start).as_secs();
-    pending.insert(token, Pending {
-        target: idx,
-        sent_at: now,
-        deadline: now + config.timeout,
-        seq,
-        second,
-    });
+    pending.insert(
+        token,
+        Pending {
+            target: idx,
+            sent_at: now,
+            deadline: now + config.timeout,
+            seq,
+            second,
+        },
+    );
     target.sent += 1;
     target.stats.on_send();
     if matches!(config.mode, Mode::Monitor | Mode::Tui) {
@@ -190,7 +193,10 @@ fn send_one(
 }
 
 fn event_reply(config: &Config, target: &Target, seq: u16, ms: f64, bytes: usize) {
-    if config.quiet || (config.output == Output::Text && matches!(config.mode, Mode::Range | Mode::Monitor | Mode::Tui)) {
+    if config.quiet
+        || (config.output == Output::Text
+            && matches!(config.mode, Mode::Range | Mode::Monitor | Mode::Tui))
+    {
         return;
     }
     match config.output {
@@ -251,7 +257,9 @@ fn on_reply(
         {
             return;
         }
-        let Some(probe) = pending.remove(&token) else { return };
+        let Some(probe) = pending.remove(&token) else {
+            return;
+        };
         let ms = now.duration_since(probe.sent_at).as_secs_f64() * 1000.0;
         let target = &mut targets[probe.target];
         target.stats.on_reply(ms);
@@ -281,7 +289,11 @@ fn note_recent(recent: &mut VecDeque<(u64, usize, bool)>, id: u64, idx: usize, r
 fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 {
     let sent: u64 = targets.iter().map(|t| t.stats.sent).sum();
     let received: u64 = targets.iter().map(|t| t.stats.received).sum();
-    let loss = if sent == 0 { 100.0 } else { 100.0 * sent.saturating_sub(received) as f64 / sent as f64 };
+    let loss = if sent == 0 {
+        100.0
+    } else {
+        100.0 * sent.saturating_sub(received) as f64 / sent as f64
+    };
     let alive = targets.iter().filter(|t| t.stats.received > 0).count();
     let all_alive = alive == targets.len();
     match config.output {
@@ -325,7 +337,12 @@ fn print_summary(config: &Config, targets: &[Target], elapsed: Duration) -> i32 
                 let s = &targets[0].stats;
                 emit(&format!(
                     "rtt min/avg/max/mdev = {:.3}/{:.3}/{:.3}/{:.3} ms  p95={:.3} jitter={:.3} ms",
-                    s.min, s.mean, s.max, s.mdev(), s.percentile(0.95), s.jitter()
+                    s.min,
+                    s.mean,
+                    s.max,
+                    s.mdev(),
+                    s.percentile(0.95),
+                    s.jitter()
                 ));
                 if s.duplicates > 0 {
                     emit(&format!("{} duplicate replies ignored", s.duplicates));
@@ -386,7 +403,9 @@ fn socket_error(e: io::Error) -> String {
 /// Executes the complete bounded probe loop; 0 reply / 1 none / 2 reserved for caller errors.
 pub fn run(config: Config) -> Result<i32, String> {
     if config.mode == Mode::Tui && !cfg!(feature = "tui") {
-        return Err("TUI was not built; use cargo build --features tui or 'piping monitor HOST'".into());
+        return Err(
+            "TUI was not built; use cargo build --features tui or 'piping monitor HOST'".into(),
+        );
     }
     let mut targets = if config.mode == Mode::Range {
         range::expand(&config.target, config.max_hosts, config.family)?
@@ -454,27 +473,42 @@ pub fn run(config: Config) -> Result<i32, String> {
             if redraw {
                 if let Some(screen) = screen.as_ref() {
                     screen.show(
-                    &cli::visible_host(&config.target),
-                    &history.recent(22, config.ascii),
-                    targets[0].stats.sent,
-                    targets[0].stats.received,
+                        &cli::visible_host(&config.target),
+                        &history.recent(22, config.ascii),
+                        targets[0].stats.sent,
+                        targets[0].stats.received,
                     );
                 }
             }
         }
-        let finished = config.count.is_some_and(|limit| targets.iter().all(|t| t.sent >= limit));
+        let finished = config
+            .count
+            .is_some_and(|limit| targets.iter().all(|t| t.sent >= limit));
         if finished && pending.is_empty() {
             break;
         }
         let candidate = if now >= next_send && pending.len() < config.jobs {
-            select_target(&targets, &pending, &mut cursor, config.count, config.mode == Mode::Range)
+            select_target(
+                &targets,
+                &pending,
+                &mut cursor,
+                config.count,
+                config.mode == Mode::Range,
+            )
         } else {
             None
         };
         if let Some(idx) = candidate {
             send_one(
-                &config, &sockets, &mut targets, &mut pending, &mut history,
-                start, nonce, token, idx,
+                &config,
+                &sockets,
+                &mut targets,
+                &mut pending,
+                &mut history,
+                start,
+                nonce,
+                token,
+                idx,
             )?;
             token = token.checked_add(1).ok_or("probe sequence exhausted")?;
             next_send = Instant::now() + config.interval;
@@ -490,11 +524,21 @@ pub fn run(config: Config) -> Result<i32, String> {
             let next_graph = start + Duration::from_secs(second_to_render + 1);
             delay = delay.min(next_graph.saturating_duration_since(now));
         }
-        sockets.wait(delay).map_err(|e| format!("poll ICMP sockets: {e}"))?;
-        for reply in sockets.collect().map_err(|e| format!("receive ICMP: {e}"))? {
+        sockets
+            .wait(delay)
+            .map_err(|e| format!("poll ICMP sockets: {e}"))?;
+        for reply in sockets
+            .collect()
+            .map_err(|e| format!("receive ICMP: {e}"))?
+        {
             on_reply(
-                &config, reply, nonce, &mut pending, &mut targets,
-                &mut history, &mut recent,
+                &config,
+                reply,
+                nonce,
+                &mut pending,
+                &mut targets,
+                &mut history,
+                &mut recent,
             );
         }
     }
@@ -515,14 +559,29 @@ mod tests {
         let mut targets = vec![Target::new("a".into(), ip), Target::new("b".into(), ip)];
         let mut p = HashMap::new();
         let mut cursor = 0;
-        assert_eq!(select_target(&targets, &p, &mut cursor, Some(1), true), Some(0));
-        p.insert(1, Pending {
-            target: 0, sent_at: Instant::now(), deadline: Instant::now(),
-            seq: 1, second: 0,
-        });
-        assert_eq!(select_target(&targets, &p, &mut cursor, Some(1), true), Some(1));
+        assert_eq!(
+            select_target(&targets, &p, &mut cursor, Some(1), true),
+            Some(0)
+        );
+        p.insert(
+            1,
+            Pending {
+                target: 0,
+                sent_at: Instant::now(),
+                deadline: Instant::now(),
+                seq: 1,
+                second: 0,
+            },
+        );
+        assert_eq!(
+            select_target(&targets, &p, &mut cursor, Some(1), true),
+            Some(1)
+        );
         targets[1].sent = 1;
-        assert_eq!(select_target(&targets, &p, &mut cursor, Some(1), true), None);
+        assert_eq!(
+            select_target(&targets, &p, &mut cursor, Some(1), true),
+            None
+        );
     }
 
     #[test]

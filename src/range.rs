@@ -19,12 +19,19 @@ pub fn expand(input: &str, max_hosts: usize, v6: Option<bool>) -> Result<Vec<IpA
         }
         (a..=b).map(|n| IpAddr::V4(Ipv4Addr::from(n))).collect()
     } else {
-        vec![input.parse().map_err(|_| "range needs an IP, CIDR or IPv4 START-END")?]
+        vec![
+            input
+                .parse()
+                .map_err(|_| "range needs an IP, CIDR or IPv4 START-END")?,
+        ]
     };
     if list.len() > max_hosts {
         return Err(format!("range exceeds --max-hosts={max_hosts}"));
     }
-    if list.iter().any(|ip| v6.is_some_and(|is_v6| is_v6 != ip.is_ipv6())) {
+    if list
+        .iter()
+        .any(|ip| v6.is_some_and(|is_v6| is_v6 != ip.is_ipv6()))
+    {
         return Err("range addresses conflict with -4/-6".into());
     }
     Ok(list)
@@ -51,7 +58,11 @@ fn expand_cidr(ip: &str, prefix: &str, max: usize) -> Result<Vec<IpAddr>, String
     if usable > max {
         return Err(format!("CIDR has {usable} hosts; --max-hosts={max}"));
     }
-    let mask = if prefix == 0 { 0 } else { u128::MAX << host_bits };
+    let mask = if prefix == 0 {
+        0
+    } else {
+        u128::MAX << host_bits
+    };
     let start = raw & mask;
     let mut result = Vec::with_capacity(usable);
     for offset in 0..total {
@@ -75,10 +86,13 @@ mod tests {
 
     #[test]
     fn ipv4_cidr_excludes_network_and_broadcast() {
-        assert_eq!(expand("192.0.2.0/30", 256, None).unwrap(), vec![
-            IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)),
-            IpAddr::V4(Ipv4Addr::new(192, 0, 2, 2)),
-        ]);
+        assert_eq!(
+            expand("192.0.2.0/30", 256, None).unwrap(),
+            vec![
+                IpAddr::V4(Ipv4Addr::new(192, 0, 2, 1)),
+                IpAddr::V4(Ipv4Addr::new(192, 0, 2, 2)),
+            ]
+        );
     }
 
     #[test]

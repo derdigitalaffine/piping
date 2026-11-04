@@ -59,13 +59,7 @@ struct PollFd {
 unsafe extern "C" {
     fn socket(domain: c_int, socket_type: c_int, protocol: c_int) -> c_int;
     fn close(fd: c_int) -> c_int;
-    fn setsockopt(
-        fd: c_int,
-        level: c_int,
-        opt: c_int,
-        val: *const c_void,
-        size: u32,
-    ) -> c_int;
+    fn setsockopt(fd: c_int, level: c_int, opt: c_int, val: *const c_void, size: u32) -> c_int;
     fn sendto(
         fd: c_int,
         data: *const c_void,
@@ -139,7 +133,10 @@ impl PingSocket {
 
     pub fn send(&self, target: SocketAddr, packet: &[u8]) -> io::Result<()> {
         if target.is_ipv6() != self.ipv6 {
-            return Err(io::Error::new(io::ErrorKind::InvalidInput, "IP family mismatch"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "IP family mismatch",
+            ));
         }
         let sent = match target {
             SocketAddr::V4(v4) => {
@@ -186,7 +183,10 @@ impl PingSocket {
             return Err(io::Error::last_os_error());
         }
         if sent as usize != packet.len() {
-            return Err(io::Error::new(io::ErrorKind::WriteZero, "short ICMP datagram"));
+            return Err(io::Error::new(
+                io::ErrorKind::WriteZero,
+                "short ICMP datagram",
+            ));
         }
         Ok(())
     }
@@ -209,8 +209,10 @@ impl PingSocket {
         };
         if length < 0 {
             let e = io::Error::last_os_error();
-            return if matches!(e.kind(), io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted)
-                || matches!(e.raw_os_error(), Some(101 | 111 | 113))
+            return if matches!(
+                e.kind(),
+                io::ErrorKind::WouldBlock | io::ErrorKind::Interrupted
+            ) || matches!(e.raw_os_error(), Some(101 | 111 | 113))
             {
                 Ok(None)
             } else {
@@ -236,10 +238,7 @@ impl PingSocket {
             _ => return Ok(None),
         };
         let length = length as usize;
-        Ok(parse_reply(&buffer[..length], self.ipv6).map(|echo| Received {
-            source: ip,
-            echo,
-        }))
+        Ok(parse_reply(&buffer[..length], self.ipv6).map(|echo| Received { source: ip, echo }))
     }
 
     pub fn fd(&self) -> RawFd {
@@ -267,8 +266,11 @@ pub fn echo_request(ipv6: bool, seq: u16, nonce: u64, token: u64, size: usize) -
     let mut packet = vec![0x42; size + 8];
     packet[..8].copy_from_slice(&[
         if ipv6 { 128 } else { 8 },
-        0, 0, 0, // Kernel calculates checksum.
-        0, 0, // Kernel-managed echo identifier.
+        0,
+        0,
+        0, // Kernel calculates checksum.
+        0,
+        0, // Kernel-managed echo identifier.
         (seq >> 8) as u8,
         seq as u8,
     ]);
@@ -286,7 +288,12 @@ pub fn parse_reply(packet: &[u8], ipv6: bool) -> Option<Echo> {
     let seq = u16::from_be_bytes([packet[6], packet[7]]);
     let nonce = u64::from_be_bytes(packet[8..16].try_into().ok()?);
     let token = u64::from_be_bytes(packet[16..24].try_into().ok()?);
-    Some(Echo { seq, nonce, token, bytes: packet.len() })
+    Some(Echo {
+        seq,
+        nonce,
+        token,
+        bytes: packet.len(),
+    })
 }
 
 pub struct SocketSet {

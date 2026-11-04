@@ -14,7 +14,12 @@ pub struct Bucket {
 
 impl Bucket {
     pub fn new(second: u64) -> Self {
-        Self { second, sent: 0, timeouts: 0, replies: Vec::new() }
+        Self {
+            second,
+            sent: 0,
+            timeouts: 0,
+            replies: Vec::new(),
+        }
     }
 
     pub fn median(&self) -> f64 {
@@ -53,11 +58,18 @@ pub struct History {
 
 impl History {
     pub fn new(capacity: usize) -> Self {
-        Self { buckets: VecDeque::new(), capacity: capacity.clamp(5, 3600) + 4 }
+        Self {
+            buckets: VecDeque::new(),
+            capacity: capacity.clamp(5, 3600) + 4,
+        }
     }
 
     fn get_mut(&mut self, second: u64) -> Option<&mut Bucket> {
-        if self.buckets.front().is_some_and(|first| second < first.second) {
+        if self
+            .buckets
+            .front()
+            .is_some_and(|first| second < first.second)
+        {
             return None;
         }
         if self.buckets.is_empty() {
@@ -110,10 +122,16 @@ impl History {
 
     pub fn recent(&self, max_lines: usize, ascii: bool) -> String {
         let max = self.axis_max();
-        self.buckets.iter().rev().take(max_lines).collect::<Vec<_>>()
-            .into_iter().rev()
+        self.buckets
+            .iter()
+            .rev()
+            .take(max_lines)
+            .collect::<Vec<_>>()
+            .into_iter()
+            .rev()
             .map(|b| format_bucket(b, max, ascii))
-            .collect::<Vec<_>>().join("\n")
+            .collect::<Vec<_>>()
+            .join("\n")
     }
 }
 
@@ -127,10 +145,21 @@ fn scale(ms: f64, axis: f64) -> usize {
 fn format_bucket(b: &Bucket, max_ms: f64, ascii: bool) -> String {
     let mut cells = [' '; 28];
     if b.replies.is_empty() {
-        cells[0] = if b.timeouts > 0 { 'X' } else if b.pending() > 0 { '?' } else { '.' };
+        cells[0] = if b.timeouts > 0 {
+            'X'
+        } else if b.pending() > 0 {
+            '?'
+        } else {
+            '.'
+        };
         return format!(
             "t+{:04}s  |{}|  {:>2}/{:<2}  loss {:>5.1}%  pending {}  no RTT",
-            b.second, cells.iter().collect::<String>(), b.replies.len(), b.sent, b.loss(), b.pending()
+            b.second,
+            cells.iter().collect::<String>(),
+            b.replies.len(),
+            b.sent,
+            b.loss(),
+            b.pending()
         );
     }
     let lo = scale(b.p10(), max_ms);

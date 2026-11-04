@@ -106,8 +106,12 @@ mod tests {
     #[test]
     fn loss_welford_jitter_and_percentile() {
         let mut s = Stats::default();
-        for _ in 0..4 { s.on_send(); }
-        for n in [1.0, 2.0, 3.0] { s.on_reply(n); }
+        for _ in 0..4 {
+            s.on_send();
+        }
+        for n in [1.0, 2.0, 3.0] {
+            s.on_reply(n);
+        }
         assert_eq!(s.received, 3);
         assert!((s.loss_percent() - 25.0).abs() < 1e-9);
         assert!((s.mean - 2.0).abs() < 1e-9);

@@ -79,7 +79,9 @@ where
 fn seconds(name: &str, raw: &str) -> Result<Duration, CliError> {
     let v: f64 = number(name, raw)?;
     if !v.is_finite() || !(0.02..=3600.0).contains(&v) {
-        return Err(CliError(format!("{name} must be between 0.02 and 3600 seconds")));
+        return Err(CliError(format!(
+            "{name} must be between 0.02 and 3600 seconds"
+        )));
     }
     Ok(Duration::from_secs_f64(v))
 }
@@ -216,16 +218,24 @@ pub fn parse(args: &[String]) -> Result<Parsed, CliError> {
         return Err(CliError("empty host".into()));
     }
     if pps.is_some() && !matches!(mode, Mode::Fast | Mode::Range) {
-        return Err(CliError("--pps is supported only for fast and range".into()));
+        return Err(CliError(
+            "--pps is supported only for fast and range".into(),
+        ));
     }
     if interval.is_some() && matches!(mode, Mode::Fast | Mode::Range) {
-        return Err(CliError("use --pps rather than --interval for fast/range".into()));
+        return Err(CliError(
+            "use --pps rather than --interval for fast/range".into(),
+        ));
     }
     if jobs.is_some() && !matches!(mode, Mode::Fast | Mode::Range) {
-        return Err(CliError("--jobs is supported only for fast and range".into()));
+        return Err(CliError(
+            "--jobs is supported only for fast and range".into(),
+        ));
     }
     if (only_alive || require_all || max_hosts != 256) && mode != Mode::Range {
-        return Err(CliError("--only-alive/--require-all/--max-hosts require range".into()));
+        return Err(CliError(
+            "--only-alive/--require-all/--max-hosts require range".into(),
+        ));
     }
     if window != 60 && !matches!(mode, Mode::Monitor | Mode::Tui) {
         return Err(CliError("--window requires monitor or tui".into()));
@@ -234,7 +244,9 @@ pub fn parse(args: &[String]) -> Result<Parsed, CliError> {
         return Err(CliError("tui requires text output".into()));
     }
     if mode == Mode::Range && family == Some(true) && target.contains('-') {
-        return Err(CliError("IPv4 endpoint ranges cannot be combined with -6".into()));
+        return Err(CliError(
+            "IPv4 endpoint ranges cannot be combined with -6".into(),
+        ));
     }
     let interval = match mode {
         Mode::Fast | Mode::Range => Duration::from_secs_f64(1.0 / f64::from(pps.unwrap_or(20))),
@@ -257,7 +269,13 @@ pub fn parse(args: &[String]) -> Result<Parsed, CliError> {
         numeric,
         ttl,
         size,
-        jobs: jobs.unwrap_or(if mode == Mode::Range { 32 } else if mode == Mode::Fast { 64 } else { 16 }),
+        jobs: jobs.unwrap_or(if mode == Mode::Range {
+            32
+        } else if mode == Mode::Fast {
+            64
+        } else {
+            16
+        }),
         max_hosts,
         only_alive,
         require_all,
@@ -344,7 +362,9 @@ mod tests {
 
     #[test]
     fn classic_is_default_and_infinite() {
-        let Parsed::Run(c) = parse(&args(&["example.com"])).unwrap() else { panic!() };
+        let Parsed::Run(c) = parse(&args(&["example.com"])).unwrap() else {
+            panic!()
+        };
         assert_eq!(c.mode, Mode::Classic);
         assert_eq!(c.count, None);
         assert_eq!(c.size, 56);
@@ -352,10 +372,14 @@ mod tests {
 
     #[test]
     fn fast_and_range_have_bounded_defaults() {
-        let Parsed::Run(f) = parse(&args(&["fast", "127.0.0.1"])).unwrap() else { panic!() };
+        let Parsed::Run(f) = parse(&args(&["fast", "127.0.0.1"])).unwrap() else {
+            panic!()
+        };
         assert_eq!(f.count, Some(100));
         assert_eq!(f.interval, Duration::from_millis(50));
-        let Parsed::Run(r) = parse(&args(&["range", "192.0.2.0/30"])).unwrap() else { panic!() };
+        let Parsed::Run(r) = parse(&args(&["range", "192.0.2.0/30"])).unwrap() else {
+            panic!()
+        };
         assert_eq!(r.count, Some(1));
     }
 
@@ -379,7 +403,10 @@ mod tests {
     #[test]
     fn command_help_does_not_require_host() {
         assert!(matches!(parse(&args(&["--help"])), Ok(Parsed::Help)));
-        assert!(matches!(parse(&args(&["fast", "--version"])), Ok(Parsed::Version)));
+        assert!(matches!(
+            parse(&args(&["fast", "--version"])),
+            Ok(Parsed::Version)
+        ));
     }
 
     #[test]
