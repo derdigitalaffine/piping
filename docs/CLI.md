@@ -69,3 +69,7 @@ The `discover` command is independent from ICMP ping and is *read-only by defaul
 ## Trace / Neighborhood (v0.2 source candidate)
 
 See [Trace + Neighborhood guide](TRACE_NEIGHBORHOOD.md) for `--max-hops`, `--smoke`, `--tui`, read-only neighbor cache, on-link active private `--scan-local` and safe Linux rights. The command is `pipi`; the GitHub repository remains `derdigitalaffine/piping`.
+
+## 0.3 interactive dashboard
+
+`pipi` or `pipi tui` without HOST opens a form-driven menu on interactive terminals (optional `tui` Cargo feature). All nine modes are accessible with keyboard-configurable arguments and explicit START; active ARP has a separate confirmation. Arrows/Tab navigate, F5/Ctrl-R start, Esc back, q stops. NO_COLOR and `pipi tui --no-color` disable ANSI color. See [TUI Dashboard](TUI_DASHBOARD.md).
