@@ -22,12 +22,6 @@ const MSG_DONTWAIT: c_int = 0x40;
 const POLLIN: i16 = 1;
 
 #[repr(C)]
-struct SockAddr {
-    family: u16,
-    data: [u8; 14],
-}
-
-#[repr(C)]
 struct SockAddrIn {
     family: u16,
     port: u16,
