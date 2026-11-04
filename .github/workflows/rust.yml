@@ -30,6 +30,19 @@ jobs:
           cargo build --release --locked --all-features
           ./target/release/piping --help
           ./target/release/piping --version
+      - name: Prepare ephemeral CI runner for unprivileged ICMP socket tests
+        shell: bash
+        run: |
+          echo "Runner group and ping policy:"
+          id
+          cat /proc/sys/net/ipv4/ping_group_range || true
+          # CI-only: this is a disposable hosted runner. The piping binary never changes sysctl.
+          if command -v sudo >/dev/null && sudo -n true 2>/dev/null; then
+            sudo -n sysctl -w net.ipv4.ping_group_range="0 2147483647" || echo "::warning::Cannot enable ping sockets in this runner"
+          else
+            echo "::warning::Runner does not permit sysctl changes"
+          fi
+          cat /proc/sys/net/ipv4/ping_group_range || true
       - name: Real Linux loopback (explicit SKIP if sandbox denies ICMP)
         shell: bash
         run: |
