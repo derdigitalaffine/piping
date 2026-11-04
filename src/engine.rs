@@ -22,7 +22,7 @@ extern "C" fn stop_signal(_: i32) {
     INTERRUPTED.store(true, Ordering::Relaxed);
 }
 
-fn install_signals() {
+pub(crate) fn install_signals() {
     INTERRUPTED.store(false, Ordering::Relaxed);
     // SAFETY: signal handlers only write a lock-free atomic and do not allocate.
     unsafe {
@@ -31,7 +31,7 @@ fn install_signals() {
     }
 }
 
-fn entropy_nonce() -> Result<u64, String> {
+pub(crate) fn entropy_nonce() -> Result<u64, String> {
     let mut bytes = [0_u8; 8];
     std::fs::File::open("/dev/urandom")
         .and_then(|mut f| f.read_exact(&mut bytes))
@@ -423,6 +423,10 @@ fn socket_error(e: io::Error) -> String {
         Some(97) => format!("requested IP family is unavailable ({e}); check IPv6 support"),
         _ => format!("cannot open Linux ICMP echo socket: {e}"),
     }
+}
+
+pub(crate) fn interrupted() -> bool {
+    INTERRUPTED.load(Ordering::Relaxed)
 }
 
 /// Executes the complete bounded probe loop; 0 reply / 1 none / 2 reserved for caller errors.

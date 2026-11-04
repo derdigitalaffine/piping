@@ -7,7 +7,6 @@ use crate::linux;
 use crate::stats::Stats;
 use crate::trace_socket::{ErrorKind, ErrorReply, ProbeId, TraceSocket};
 use std::collections::VecDeque;
-use std::io::{self, IsTerminal, Write};
 use std::net::{IpAddr, SocketAddr};
 use std::time::{Duration, Instant};
 
@@ -256,7 +255,6 @@ pub fn run(args: &[String]) -> Result<i32, String> {
     let mut cycle = 0_u32;
     #[cfg(feature = "tui")]
     let screen = if options.tui { Some(crate::tui::Screen::enter()?) } else { None };
-    let _is_tty = io::stdout().is_terminal();
     let mut next_send = Instant::now();
     while !crate::engine::interrupted() && options.cycles.is_none_or(|n| cycle < n) {
         cycle += 1;
