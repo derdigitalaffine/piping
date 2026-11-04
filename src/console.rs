@@ -967,7 +967,8 @@ mod tests {
     #[test]
     fn trace_protocol_delimiters_survive_safe_pipe_filter() {
         let raw = "@pipi-hop\t1\t3\t 1  127.0.0.1\r\n";
-        let filtered: String = raw.chars()
+        let filtered: String = raw
+            .chars()
             .filter(|c| *c == '\t' || (!c.is_control() && *c != '\u{1b}'))
             .collect();
         let mut trace = TraceLive::default();
