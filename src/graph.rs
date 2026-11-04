@@ -182,6 +182,33 @@ fn format_bucket(b: &Bucket, max_ms: f64, ascii: bool) -> String {
     )
 }
 
+/// Compact per-hop SmokePing-style time series (oldest left, newest right).
+/// A lost probe is 'X', a successful RTT is a graded block; data is bounded by the caller.
+pub fn sparkline(samples: &VecDeque<Option<f64>>, width: usize, ascii: bool) -> String {
+    let width = width.min(96);
+    let peak = samples
+        .iter()
+        .filter_map(|sample| *sample)
+        .filter(|ms| ms.is_finite() && *ms >= 0.0)
+        .fold(1.0_f64, f64::max);
+    let grades: &[char] = if ascii {
+        &['_', '.', '-', ':', '=', '+', '*', '#']
+    } else {
+        &['▁', '▂', '▃', '▄', '▅', '▆', '▇', '█']
+    };
+    let mut output = String::with_capacity(width * 3);
+    for sample in samples.iter().skip(samples.len().saturating_sub(width)) {
+        match sample {
+            Some(ms) if ms.is_finite() && *ms >= 0.0 => {
+                let level = ((ms / peak * 7.0).round() as usize).min(7);
+                output.push(grades[level]);
+            }
+            _ => output.push('X'),
+        }
+    }
+    output
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -199,6 +226,18 @@ mod tests {
         h.on_send(1);
         assert!(h.line(1, true).contains("no RTT"));
         assert!(h.line(2, true).contains("no probes"));
+    }
+
+    #[test]
+    fn hop_smoke_is_bounded_and_shows_loss() {
+        let mut series = VecDeque::new();
+        for i in 0..100 {
+            series.push_back(if i == 99 { None } else { Some(f64::from(i)) });
+        }
+        assert_eq!(sparkline(&series, 8, true).chars().count(), 8);
+        assert!(sparkline(&series, 8, true).ends_with('X'));
+        assert!(sparkline(&series, 8, false).contains('▇'));
+        assert_eq!(sparkline(&VecDeque::new(), 10, false), "");
     }
 
     #[test]
