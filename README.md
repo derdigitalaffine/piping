@@ -1,10 +1,10 @@
 # piping
 
-**piping** ist ein geplantes Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
+**piping** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Status (04.11.2026): Planung/Backlog eingerichtet, noch keine Rust-Implementierung und kein geprüfter Linux-Build.** Die Beispiele unten beschreiben die festgelegte CLI-Zielschnittstelle, sind noch keine ausführbaren Beispiele.
+> **Status (04.11.2026): Rust-Implementierung als [Draft PR #18](https://github.com/derdigitalaffine/piping/pull/18) vorhanden.** Linux-CI hat die ersten 21 Unit- und vier CLI-Tests bestanden; ein vollständig grüner Build inklusive Clippy und ICMP-Loopback-Abnahme wird im [QA-Bericht](docs/QA_REPORT.md) dokumentiert. Der PR ist bis dahin kein freigegebener Produktionsrelease.
 
-## Ziel-CLI
+## Benutzbare CLI im Entwicklungsbranch
 
 ```sh
 piping example.com
@@ -20,32 +20,38 @@ piping tui example.com  # optionales Cargo-Feature 'tui'
 
 `piping HOST` ist der einfache Standardmodus; auf Nicht-TTYs wird niemals automatisch eine Fullscreen-Oberfläche gestartet. Für bestehende Scripts ist nur die dokumentierte Untermenge der iputils-Flags beabsichtigt – keine vollständige binäre Kompatibilität.
 
-## Entwicklungs-/Installationsziel (noch nicht ausführbar)
+## Linux-Build und Installation
 
-Benötigt: Linux (zuerst x86_64, dann aarch64), stable Rust/Cargo und ein ICMP-Echo-fähiges Netzwerk. Sobald #1 und die Protokoll-Issues umgesetzt sind:
+Benötigt: Linux (zuerst x86_64, dann aarch64), stable Rust/Cargo und ein ICMP-Echo-fähiges Netzwerk. Aus dem Entwicklungsbranch (bzw. nach dessen Merge aus `main`) bauen:
 
 ```sh
 cargo build --release --locked
 cargo test --locked
 cargo install --path . --locked
 ./target/release/piping --help
+# Optionale Fullscreen-UI:
+cargo build --release --locked --features tui
+./target/release/piping tui ::1
 ```
 
-Linux-ICMP-Echo-Sockets können ohne Root funktionieren, wenn die Systemkonfiguration dies erlaubt. Das Programm verändert nie automatisch `sysctl`-Werte, fordert keine pauschalen Root-Rechte und führt keine ungefragten Scans aus. Näheres in [Sicherheit](docs/SECURITY.md).
+Linux-ICMP-Echo-Sockets können ohne Root funktionieren, wenn die Systemkonfiguration dies erlaubt. Das Programm verändert nie automatisch `sysctl`-Werte, fordert keine pauschalen Root-Rechte und führt keine ungefragten Scans aus. Näheres in [Sicherheit](docs/SECURITY.md) und der [CLI-Referenz](docs/CLI.md).
 
 ## Organisation und Umsetzung
 
 Dieses Repository übernimmt die **Arbeitsorganisation** des Schwesterprojekts `kostuemwettbewerb` (nicht dessen Python-/Web-Stack): [AGENTS.md](AGENTS.md), verbindliche Spezifikationen, [Roadmap](docs/ROADMAP.md), [Abnahmetests](docs/ACCEPTANCE_TESTS.md), kleine Issue-/PR-Pakete und ehrliche QA-Berichte.
 
+- [Ausführbare CLI-Referenz](docs/CLI.md)
 - [Produkt-/CLI-Spezifikation](docs/PRODUCT_SPEC.md)
 - [Architektur](docs/ARCHITECTURE.md)
 - [Roadmap und Issue-Links](docs/ROADMAP.md)
 - [Agentenübergaben](docs/AGENT_HANDOFF.md)
 - [Sicherheitsmodell](docs/SECURITY.md)
 - [Entwicklung und Prüfbefehle](docs/DEVELOPMENT.md)
+- [QA-Status und tatsächliche Prüfergebnisse](docs/QA_REPORT.md)
+- [Release-Anleitung](docs/RELEASE.md)
 - [Entscheidungen und offene Designfragen](docs/DECISIONS.md)
 
-[GitHub-Issues](https://github.com/derdigitalaffine/piping/issues) enthalten umsetzbare Aufgaben. Der [zentrale v0.1-Tracker #17](https://github.com/derdigitalaffine/piping/issues/17) bündelt den kritischen Pfad und die Release-Abnahme. Alle Implementierungs- und Testkästchen bleiben offen, bis Code und Prüfnachweise vorliegen.
+[GitHub-Issues](https://github.com/derdigitalaffine/piping/issues) enthalten umsetzbare Aufgaben. Der [zentrale v0.1-Tracker #17](https://github.com/derdigitalaffine/piping/issues/17) bündelt den kritischen Pfad und die Release-Abnahme. Offene Implementierungs- und Testkästchen werden erst nach nachgewiesener Abnahme geschlossen.
 
 ## Leitplanken
 
