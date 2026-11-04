@@ -25,10 +25,11 @@ class Session:
         )
         self.seen = b""
 
-    def until(self, marker, seconds=8):
+    def until(self, marker, seconds=8, from_now=False):
         needle = marker.encode() if isinstance(marker, str) else marker
+        start = len(self.seen) if from_now else 0
         deadline = time.monotonic() + seconds
-        while needle not in self.seen and time.monotonic() < deadline:
+        while needle not in self.seen[start:] and time.monotonic() < deadline:
             readable, _, _ = select.select(
                 [self.master], [], [], min(0.2, max(0, deadline - time.monotonic()))
             )
@@ -40,7 +41,7 @@ class Session:
                 self.seen += block
                 if len(self.seen) > 200000:
                     self.seen = self.seen[-180000:]
-        assert needle in self.seen, (marker, self.seen[-2500:])
+        assert needle in self.seen[start:], (marker, self.seen[-2500:])
 
     def press(self, keys):
         os.write(self.master, keys)
@@ -100,7 +101,7 @@ def trace_form(s):
     s.until("TRACE / FORM")
     s.until("Max hops")
     s.press(b"\x1b")
-    s.until("NETWORK CONTROL CENTER")
+    s.until("NETWORK CONTROL CENTER", from_now=True)
     s.press(b"q")
 
 
@@ -120,7 +121,7 @@ def active_confirmation(s):
     s.until("cancelled")
     assert b"ARP SCAN / LIVE" not in s.seen
     s.press(b"\x1b")
-    s.until("NETWORK CONTROL CENTER")
+    s.until("NETWORK CONTROL CENTER", from_now=True)
     s.press(b"q")
 
 
@@ -140,9 +141,9 @@ def ping_loopback(s):
     s.until("PING / LIVE")
     s.until("127.0.0.1")
     s.press(b"q")
-    s.until("PING / FORM")
+    s.until("PING / FORM", from_now=True)
     s.press(b"\x1b")
-    s.until("NETWORK CONTROL CENTER")
+    s.until("NETWORK CONTROL CENTER", from_now=True)
     s.press(b"q")
 
 
