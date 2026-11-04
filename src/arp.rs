@@ -110,24 +110,40 @@ fn parse_route_ip(raw: &str) -> Option<u32> {
     Some(u32::from(Ipv4Addr::from(encoded.to_le_bytes())))
 }
 
-fn onlink_route(routes: &str, iface: &str, target: Ipv4Addr) -> bool {
-    let ip = u32::from(target);
-    routes.lines().skip(1).any(|line| {
-        let fields: Vec<_> = line.split_whitespace().collect();
-        if fields.len() < 8 || fields[0] != iface {
-            return false;
-        }
-        let (Some(destination), Some(gateway), Some(mask), Ok(flags)) = (
-            parse_route_ip(fields[1]),
-            parse_route_ip(fields[2]),
-            parse_route_ip(fields[7]),
-            u32::from_str_radix(fields[3], 16),
+/// Parse each route once (no per-target allocations), only routes that are up,
+/// directly connected and do not use a gateway.
+fn connected_routes(routes: &str, iface: &str) -> Vec<(u32, u32)> {
+    let mut connected = Vec::new();
+    for line in routes.lines().skip(1) {
+        let mut parts = line.split_whitespace();
+        let (
+            Some(name), Some(destination), Some(gateway), Some(flags),
+            Some(_refs), Some(_use), Some(_metric), Some(mask),
+        ) = (
+            parts.next(), parts.next(), parts.next(), parts.next(),
+            parts.next(), parts.next(), parts.next(), parts.next(),
         ) else {
-            return false;
+            continue;
         };
-        (flags & 1) != 0 && (flags & 2) == 0 && gateway == 0 && mask != 0
-            && (ip & mask) == (destination & mask)
-    })
+        if name != iface { continue; }
+        let (Some(dest), Some(gw), Some(mask), Ok(flags)) = (
+            parse_route_ip(destination),
+            parse_route_ip(gateway),
+            parse_route_ip(mask),
+            u32::from_str_radix(flags, 16),
+        ) else {
+            continue;
+        };
+        if flags & 1 != 0 && flags & 2 == 0 && gw == 0 && mask != 0 {
+            connected.push((dest & mask, mask));
+        }
+    }
+    connected
+}
+
+fn is_onlink(routes: &[(u32, u32)], target: Ipv4Addr) -> bool {
+    let ip = u32::from(target);
+    routes.iter().any(|&(network, mask)| ip & mask == network)
 }
 
 fn request(src_mac: [u8; 6], src_ip: Ipv4Addr, target: Ipv4Addr) -> [u8; 42] {
@@ -201,7 +217,8 @@ pub fn scan(
     let own_mac = interface_mac(interface)?;
     let routes = std::fs::read_to_string("/proc/net/route")
         .map_err(|e| format!("cannot inspect IPv4 on-link routes: {e}"))?;
-    if !targets.iter().all(|ip| onlink_route(&routes, interface, *ip)) {
+    let connected = connected_routes(&routes, interface);
+    if !targets.iter().all(|ip| is_onlink(&connected, *ip)) {
         return Err("active CIDR must be entirely on a directly connected IPv4 route of the chosen interface (no gateways or off-link targets)".into());
     }
     targets.retain(|ip| *ip != own_ip);
@@ -233,8 +250,8 @@ pub fn scan(
     let mut next_send = Instant::now();
     let mut finish_at = None;
     let mut sent = 0_usize;
-    let mut seen = HashSet::new();
-    let mut found = Vec::new();
+    let mut seen = HashSet::with_capacity(targets.len());
+    let mut found = Vec::with_capacity(targets.len());
     let mut buffer = [0_u8; 2048];
 
     loop {
@@ -318,10 +335,10 @@ eth1\t0000A8C0\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0\n";
 
     #[test]
     fn direct_route_allows_only_the_correct_interface_and_subnet() {
-        assert!(onlink_route(ROUTES, "eth0", Ipv4Addr::new(192, 168, 2, 42)));
-        assert!(!onlink_route(ROUTES, "eth0", Ipv4Addr::new(192, 168, 3, 42)));
-        assert!(!onlink_route(ROUTES, "eth1", Ipv4Addr::new(192, 168, 2, 42)));
-        assert!(!onlink_route(ROUTES, "lo", Ipv4Addr::new(192, 168, 2, 42)));
+        assert!(is_onlink(&connected_routes(ROUTES, "eth0"), Ipv4Addr::new(192, 168, 2, 42)));
+        assert!(!is_onlink(&connected_routes(ROUTES, "eth0"), Ipv4Addr::new(192, 168, 3, 42)));
+        assert!(!is_onlink(&connected_routes(ROUTES, "eth1"), Ipv4Addr::new(192, 168, 2, 42)));
+        assert!(!is_onlink(&connected_routes(ROUTES, "lo"), Ipv4Addr::new(192, 168, 2, 42)));
     }
 
     #[test]
