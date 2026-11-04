@@ -51,10 +51,30 @@ pub fn frame(title: &str, rows: &[String], footer: &str, width: usize, height: u
     output.push_str(&clip(title, width));
     output.push('\n');
     let available = height.saturating_sub(2);
-    // When a table exceeds the viewport prefer its first rows, not a scrolling flood.
-    for row in rows.iter().take(available) {
-        output.push_str(&clip(row, width));
+    // For long live tables retain their header and *latest* hop/device rows;
+    // otherwise a 40x12 terminal would never show hops beyond the first ten.
+    if rows.len() > available && available >= 3 {
+        output.push_str(&clip(&rows[0], width));
         output.push('\n');
+        let tail = available - 2;
+        output.push_str(&clip(&format!(
+            "... {} earlier rows hidden", rows.len() - tail - 1
+        ), width));
+        output.push('\n');
+        for row in rows.iter().skip(rows.len() - tail) {
+            output.push_str(&clip(row, width));
+            output.push('\n');
+        }
+    } else if rows.len() > available && available > 0 {
+        for row in rows.iter().skip(rows.len() - available) {
+            output.push_str(&clip(row, width));
+            output.push('\n');
+        }
+    } else {
+        for row in rows.iter().take(available) {
+            output.push_str(&clip(row, width));
+            output.push('\n');
+        }
     }
     output.push_str(&clip(footer, width));
     output
@@ -133,6 +153,16 @@ mod tests {
             assert!(f.lines().all(|line| line.chars().count() < width));
             assert!(!f.contains('\x1b'));
         }
+    }
+
+    #[test]
+    fn long_hop_table_keeps_current_hop_on_single_screen() {
+        let hops: Vec<String> = (1..=32).map(|n| format!("Hop {n}")).collect();
+        let display = frame("pipi TRACE", &hops, "Ctrl-C", 40, 12);
+        assert!(display.lines().count() <= 12);
+        assert!(display.contains("Hop 32"));
+        assert!(display.contains("earlier rows hidden"));
+        assert!(!display.contains("Hop 15"));
     }
 
     #[test]
