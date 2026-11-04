@@ -150,7 +150,7 @@ pub fn parse_batch(frame: &[u8], neighbors: &mut Vec<Neighbor>) -> Result<bool, 
                         .map(i32::from_ne_bytes)
                         .ok_or("malformed netlink error")?;
                     if errno < 0 {
-                        return Err(format!("RTM_GETNEIGH failed: {}", io::Error::from_raw_os_error(-errno)));
+                        return Err(format!("RTM_GETNEIGH failed: {}", io::Error::from_raw_os_error(errno.checked_neg().unwrap_or(i32::MAX))));
                     }
                 }
                 RTM_NEWNEIGH => {
