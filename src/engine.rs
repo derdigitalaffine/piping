@@ -130,6 +130,12 @@ impl Target {
             sent: 0,
         }
     }
+
+    fn new_sweep(label: String, addr: SocketAddr) -> Self {
+        let mut target = Self::new(label, addr);
+        target.stats = Stats::for_sweep();
+        target
+    }
 }
 
 #[derive(Debug)]
@@ -141,25 +147,21 @@ struct Pending {
     second: u64,
 }
 
+/// O(1) fair selection. A range target re-enters the queue only after
+/// its previous probe has completed (one outstanding probe per host).
 fn select_target(
     targets: &[Target],
-    in_flight: &HashMap<u64, Pending>,
-    cursor: &mut usize,
+    ready: &mut VecDeque<usize>,
     count: Option<u32>,
     is_range: bool,
 ) -> Option<usize> {
-    for off in 0..targets.len() {
-        let idx = (*cursor + off) % targets.len();
-        if count.is_some_and(|limit| targets[idx].sent >= limit) {
-            continue;
-        }
-        if is_range && in_flight.values().any(|probe| probe.target == idx) {
-            continue;
-        }
-        *cursor = (idx + 1) % targets.len();
-        return Some(idx);
+    if is_range {
+        ready.pop_front()
+    } else if count.is_none_or(|limit| targets[0].sent < limit) {
+        Some(0)
+    } else {
+        None
     }
-    None
 }
 
 struct SendContext<'a> {
@@ -174,6 +176,7 @@ fn send_one(
     targets: &mut [Target],
     pending: &mut HashMap<u64, Pending>,
     history: &mut History,
+    packet: &mut [u8],
     token: u64,
     idx: usize,
 ) -> Result<(), String> {
@@ -181,16 +184,10 @@ fn send_one(
     let sockets = context.sockets;
     let target = &mut targets[idx];
     let seq = token as u16;
-    let packet = linux::echo_request(
-        target.addr.is_ipv6(),
-        seq,
-        context.nonce,
-        token,
-        config.size,
-    );
+    linux::write_echo_request(packet, target.addr.is_ipv6(), seq, context.nonce, token);
     sockets
         .for_address(target.addr)
-        .send(target.addr, &packet)
+        .send(target.addr, packet)
         .map_err(|e| format!("send ICMP echo to {}: {e}", target.addr.ip()))?;
     let now = Instant::now();
     let second = now.duration_since(context.start).as_secs();
@@ -268,9 +265,9 @@ fn on_reply(
     targets: &mut [Target],
     history: &mut History,
     recent: &mut VecDeque<(u64, usize, bool)>,
-) {
+) -> Option<usize> {
     if incoming.echo.nonce != nonce {
-        return;
+        return None;
     }
     let token = incoming.echo.token;
     let now = Instant::now();
@@ -279,10 +276,10 @@ fn on_reply(
             || targets[probe.target].addr.ip() != incoming.source
             || now > probe.deadline
         {
-            return;
+            return None;
         }
         let Some(probe) = pending.remove(&token) else {
-            return;
+            return None;
         };
         let ms = now.duration_since(probe.sent_at).as_secs_f64() * 1000.0;
         let target = &mut targets[probe.target];
@@ -292,15 +289,17 @@ fn on_reply(
         }
         event_reply(config, target, probe.seq, ms, incoming.echo.bytes);
         note_recent(recent, token, probe.target, true);
+        return Some(probe.target);
     } else if let Some((_, idx, completed)) = recent.iter().find(|(id, _, _)| *id == token) {
         let target = &mut targets[*idx];
         if target.addr.ip() != incoming.source {
-            return;
+            return None;
         }
         if *completed {
             target.stats.duplicates += 1;
         }
     }
+    None
 }
 
 fn note_recent(recent: &mut VecDeque<(u64, usize, bool)>, id: u64, idx: usize, replied: bool) {
@@ -436,7 +435,7 @@ pub fn run(config: Config) -> Result<i32, String> {
     let mut targets = if config.mode == Mode::Range {
         range::expand(&config.target, config.max_hosts, config.family)?
             .into_iter()
-            .map(|ip| Target::new(ip.to_string(), SocketAddr::new(ip, 0)))
+            .map(|ip| Target::new_sweep(ip.to_string(), SocketAddr::new(ip, 0)))
             .collect::<Vec<_>>()
     } else {
         let addr = cli::resolve(&config.target, config.family).map_err(|e| e.to_string())?;
@@ -453,7 +452,13 @@ pub fn run(config: Config) -> Result<i32, String> {
     let mut history = History::new(config.window);
     let mut pending: HashMap<u64, Pending> = HashMap::new();
     let mut recent: VecDeque<(u64, usize, bool)> = VecDeque::new();
-    let mut cursor = 0;
+    let mut ready: VecDeque<usize> = if config.mode == Mode::Range {
+        (0..targets.len()).collect()
+    } else {
+        VecDeque::new()
+    };
+    // All probe payload memory is allocated once and reused.
+    let mut packet = vec![0x42; config.size + 8];
     let mut token = 1_u64;
     let mut second_to_render = 0_u64;
     let start = Instant::now();
@@ -472,19 +477,22 @@ pub fn run(config: Config) -> Result<i32, String> {
             break;
         }
         let now = Instant::now();
-        let expired: Vec<u64> = pending
-            .iter()
-            .filter_map(|(id, probe)| (probe.deadline <= now).then_some(*id))
-            .collect();
-        for id in expired {
-            if let Some(probe) = pending.remove(&id) {
-                if matches!(config.mode, Mode::Monitor | Mode::Tui) {
-                    history.on_timeout(probe.second);
-                }
-                event_timeout(&config, &targets[probe.target], probe.seq);
-                note_recent(&mut recent, id, probe.target, false);
+        pending.retain(|id, probe| {
+            if probe.deadline > now {
+                return true;
             }
-        }
+            if matches!(config.mode, Mode::Monitor | Mode::Tui) {
+                history.on_timeout(probe.second);
+            }
+            event_timeout(&config, &targets[probe.target], probe.seq);
+            note_recent(&mut recent, *id, probe.target, false);
+            if config.mode == Mode::Range
+                && config.count.is_some_and(|limit| targets[probe.target].sent < limit)
+            {
+                ready.push_back(probe.target);
+            }
+            false
+        });
         let elapsed = now.duration_since(start);
         if matches!(config.mode, Mode::Monitor | Mode::Tui) {
             #[cfg(feature = "tui")]
@@ -514,13 +522,7 @@ pub fn run(config: Config) -> Result<i32, String> {
             break;
         }
         let candidate = if now >= next_send && pending.len() < config.jobs {
-            select_target(
-                &targets,
-                &pending,
-                &mut cursor,
-                config.count,
-                config.mode == Mode::Range,
-            )
+            select_target(&targets, &mut ready, config.count, config.mode == Mode::Range)
         } else {
             None
         };
@@ -535,13 +537,15 @@ pub fn run(config: Config) -> Result<i32, String> {
                 &mut targets,
                 &mut pending,
                 &mut history,
+                &mut packet,
                 token,
                 idx,
             )?;
             token = token.checked_add(1).ok_or("probe sequence exhausted")?;
             next_send = Instant::now() + config.interval;
         }
-        let mut delay = Duration::from_millis(200);
+        let mut delay = Duration::from_secs(60);
+        let now = Instant::now();
         if next_send > now {
             delay = delay.min(next_send.duration_since(now));
         }
@@ -555,20 +559,25 @@ pub fn run(config: Config) -> Result<i32, String> {
         sockets
             .wait(delay)
             .map_err(|e| format!("poll ICMP sockets: {e}"))?;
-        for reply in sockets
-            .collect()
-            .map_err(|e| format!("receive ICMP: {e}"))?
-        {
-            on_reply(
-                &config,
-                reply,
-                nonce,
-                &mut pending,
-                &mut targets,
-                &mut history,
-                &mut recent,
-            );
-        }
+        sockets
+            .drain(|reply| {
+                let completed = on_reply(
+                    &config,
+                    reply,
+                    nonce,
+                    &mut pending,
+                    &mut targets,
+                    &mut history,
+                    &mut recent,
+                );
+                if let Some(idx) = completed
+                    && config.mode == Mode::Range
+                    && config.count.is_some_and(|limit| targets[idx].sent < limit)
+                {
+                    ready.push_back(idx);
+                }
+            })
+            .map_err(|e| format!("receive ICMP: {e}"))?;
     }
 
     #[cfg(feature = "tui")]
@@ -582,34 +591,32 @@ mod tests {
     use std::net::{IpAddr, Ipv4Addr};
 
     #[test]
-    fn scheduler_honors_count_and_one_inflight_per_range_host() {
+    fn range_ready_queue_is_fair_and_one_probe_per_host() {
         let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
-        let mut targets = vec![Target::new("a".into(), ip), Target::new("b".into(), ip)];
-        let mut p = HashMap::new();
-        let mut cursor = 0;
-        assert_eq!(
-            select_target(&targets, &p, &mut cursor, Some(1), true),
-            Some(0)
-        );
-        p.insert(
-            1,
-            Pending {
-                target: 0,
-                sent_at: Instant::now(),
-                deadline: Instant::now(),
-                seq: 1,
-                second: 0,
-            },
-        );
-        assert_eq!(
-            select_target(&targets, &p, &mut cursor, Some(1), true),
-            Some(1)
-        );
-        targets[1].sent = 1;
-        assert_eq!(
-            select_target(&targets, &p, &mut cursor, Some(1), true),
-            None
-        );
+        let targets = vec![
+            Target::new_sweep("a".into(), ip),
+            Target::new_sweep("b".into(), ip),
+            Target::new_sweep("c".into(), ip),
+        ];
+        let mut ready: VecDeque<_> = (0..targets.len()).collect();
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), Some(0));
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), Some(1));
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), Some(2));
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), None);
+        ready.push_back(0);
+        ready.push_back(2);
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), Some(0));
+        assert_eq!(select_target(&targets, &mut ready, Some(2), true), Some(2));
+    }
+
+    #[test]
+    fn classic_and_fast_have_constant_time_target_selection() {
+        let ip = SocketAddr::new(IpAddr::V4(Ipv4Addr::LOCALHOST), 0);
+        let mut targets = vec![Target::new("one".into(), ip)];
+        let mut ready = VecDeque::new();
+        assert_eq!(select_target(&targets, &mut ready, None, false), Some(0));
+        targets[0].sent = 100;
+        assert_eq!(select_target(&targets, &mut ready, Some(100), false), None);
     }
 
     #[test]
