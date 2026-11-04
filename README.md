@@ -2,20 +2,20 @@
 
 **pipi** ist ein Rust-CLI-Tool für zuverlässige ICMP-Echo-Messungen unter Linux: klassisches Ping, schnelle Messungen, Range Pong (CIDR-/Adressbereich-Sweep) und SmokePing-artige Terminalgrafiken. Eine interaktive Fullscreen-TUI ist **optional**.
 
-> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary \`piping\` wird **\`pipi\` 0.2.0**. GitHub-Repository und Clone-URL bleiben \`derdigitalaffine/piping\`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die aktuelle GitHub-Actions-Infrastruktur startet keine Jobs; Rust-/Linux-Tests und Produktivreife der neuen Version sind noch nicht nachgewiesen.** Der ältere grüne [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) gilt nur für den vorherigen \`piping\`-Stand.
+> **Entwicklungsstand (04.11.2026):** Aus dem bisherigen Binary `piping` wird **`pipi` 0.2.0**. GitHub-Repository und Clone-URL bleiben `derdigitalaffine/piping`. Neue Features: MTR-artiges Trace mit Smoke pro Hop, kompakte Ping-/Trace-TUI, automatisch gruppierte ARP-/NDP-Nachbarschaftsgrafik. **Die aktuelle GitHub-Actions-Infrastruktur startet keine Jobs; Rust-/Linux-Tests und Produktivreife der neuen Version sind noch nicht nachgewiesen.** Der ältere grüne [CI-Lauf #41807144867](https://github.com/derdigitalaffine/piping/actions/runs/41807144867) gilt nur für den vorherigen `piping`-Stand.
 
 ## Neu: Trace / Neighborhood / TUI
 
-\`\`\`sh
+```sh
 pipi trace -c 3 --smoke --max-hops 16 127.0.0.1
 pipi trace --tui --smoke 1.1.1.1
 pipi neighborhood                       # passive lokale Netzwerkumgebung
 pipi neighborhood --tui                 # automatisch aktualisierte grafische Ansicht
 pipi neighborhood --scan-local -i eth0  # explizit aktive private ARP-Erkennung
 pipi discover --family 6 --output jsonl
-\`\`\`
+```
 
-**Installation mit TUI:** \`cargo install --path . --locked --features tui\`. Details zu Grenzen und Privilegien: [Trace + Neighborhood](docs/TRACE_NEIGHBORHOOD.md) und [Discovery](docs/DISCOVERY.md).
+**Installation mit TUI:** `cargo install --path . --locked --features tui`. Details zu Grenzen und Privilegien: [Trace + Neighborhood](docs/TRACE_NEIGHBORHOOD.md) und [Discovery](docs/DISCOVERY.md).
 
 ## Basisbefehle
 
