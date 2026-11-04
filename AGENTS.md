@@ -59,3 +59,7 @@ Widersprüche in PR und `docs/DECISIONS.md` dokumentieren, Sicherheitsinvariante
 ## Definition of Done
 
 Ein Issue gilt erst als fertig, wenn Kriterien im Ticket + zugehörige `docs/ACCEPTANCE_TESTS.md`-Fälle bestanden sind, Beispiel-CLI/Doku stimmt, Ressourcen/Rechte geprüft wurden und echte Linux-Build-/CI-Nachweise vorliegen. Bei äußerlichen Tests: offen/übersprungen explizit markieren. Vollständige Projekt-DoD siehe Roadmap.
+
+## M6-Agenten (Issues #20–#22)
+
+**Hotpath/Performance-Agent (#20):** Keine Heap-Allokation pro Echo/Socketevent, faire O(1)-Queue, CPU/RSS/PPS auf gleichem Linux-Runner messen. Grenzwerte bleiben für autorisierte Netze und Loopback. **Layer-2-Agent (#21):** Rootless, passive read-only Netlink ARP/NDP, starke Parser-Validierung, fehlende Cacheeinträge als normal behandeln. **Active-ARP/Security-Agent (#22):** Explizit freigegebenes Interface/CIDR, on-link-Route, kein Auto-Sudo, max 100 PPS/256 Hosts, synthetische Forgery-Tests und veth-only Live-Integration. Bestehende Main-DoD darf nicht als Bestätigung der neuen Module missverstanden werden.

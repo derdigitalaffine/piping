@@ -36,6 +36,14 @@ Stand: **04.11.2026**. Rust-Code und Linux-CI sind via [PR #18](https://github.c
 
 24 Unit- + 4 CLI-Tests, fmt/clippy, Rust-1.85/MSRV, beide Linux-x86_64-Release-Konfigurationen, 11 Loopback-Tests und ein begrenzter 100-PPS-Benchmark wurden erfolgreich nachgewiesen. Details und offene Restrisiken: [QA_REPORT](QA_REPORT.md). Die folgenden Release-Checkboxen sind konservative Freigabegates, kein Fortschrittszähler.
 
+## M6 – Linux Fastpath und Layer-2 Discovery (nächster Kandidat)
+
+- [ ] [#20](https://github.com/derdigitalaffine/piping/issues/20): Single-Buffer ICMP, Poll ohne Busy-Wait, O(1)-Range-Queue, minimale Sweep-Statistik; Rust 1.85, Linux CI und belegte 100/1000-PPS-Vergleichsmessung.
+- [ ] [#21](https://github.com/derdigitalaffine/piping/issues/21): Passive ARP/NDP-Nachbarerkennung mit Linux RTM_GETNEIGH, Ausgabe-/Parser-/Limit-Tests.
+- [ ] [#22](https://github.com/derdigitalaffine/piping/issues/22): Explizite aktive ARP-Erkennung ausschließlich on-link, CAP_NET_RAW, isolierter veth-Test ohne öffentliche Ziele.
+
+**Status:** Implementiert auf dem Feature-Branch, aber **nicht abgenommen**. Die neuen GitHub-Actions-Jobs starteten ohne Schritte (siehe QA-Bericht); ältere 100-PPS-Benchmarks gelten nur für den bisherigen `main`-Stand. Keine neuen Produktions- oder Geschwindigkeitszusagen.
+
 ## Release-0.1.0-Abnahme
 
 - [ ] Standard-CLI `piping HOST` mit Classic-Ausgabe und korrekten 0/1/2-Exitcodes

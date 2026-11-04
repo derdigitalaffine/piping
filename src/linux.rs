@@ -50,6 +50,7 @@ struct SockAddrStorage {
 }
 
 #[repr(C)]
+#[derive(Clone, Copy)]
 struct PollFd {
     fd: c_int,
     events: i16,
@@ -260,22 +261,26 @@ pub struct Received {
     pub echo: Echo,
 }
 
-/// 8-byte ICMP Echo header + data bytes. Linux ping sockets manage checksums and ID.
-pub fn echo_request(ipv6: bool, seq: u16, nonce: u64, token: u64, size: usize) -> Vec<u8> {
-    assert!((16..=1400).contains(&size));
-    let mut packet = vec![0x42; size + 8];
+/// Write only the 24 correlation/header bytes into a reusable, prefilled packet.
+/// ICMP payload bytes beyond offset 24 are initialized once by the caller.
+pub fn write_echo_request(packet: &mut [u8], ipv6: bool, seq: u16, nonce: u64, token: u64) {
+    debug_assert!((24..=1408).contains(&packet.len()));
     packet[..8].copy_from_slice(&[
         if ipv6 { 128 } else { 8 },
-        0,
-        0,
-        0, // Kernel calculates checksum.
-        0,
-        0, // Kernel-managed echo identifier.
+        0, 0, 0, // Kernel computes checksum.
+        0, 0, // Linux ping sockets manage the Echo identifier.
         (seq >> 8) as u8,
         seq as u8,
     ]);
     packet[8..16].copy_from_slice(&nonce.to_be_bytes());
     packet[16..24].copy_from_slice(&token.to_be_bytes());
+}
+
+#[cfg(test)]
+pub fn echo_request(ipv6: bool, seq: u16, nonce: u64, token: u64, size: usize) -> Vec<u8> {
+    assert!((16..=1400).contains(&size));
+    let mut packet = vec![0x42; size + 8];
+    write_echo_request(&mut packet, ipv6, seq, nonce, token);
     packet
 }
 
@@ -324,36 +329,41 @@ impl SocketSet {
         }
     }
 
-    pub fn collect(&self) -> io::Result<Vec<Received>> {
-        let mut output = Vec::new();
+    /// Handle socket responses immediately: no heap Vec allocation per wakeup.
+    /// Bounded to 256 frames per socket so high packet rates cannot starve timers.
+    pub fn drain<F>(&self, mut handle: F) -> io::Result<()>
+    where
+        F: FnMut(Received),
+    {
         for socket in self.v4.iter().chain(self.v6.iter()) {
-            // Cap receive work per wakeup, so queued replies cannot starve deadlines.
             for _ in 0..256 {
                 match socket.recv()? {
-                    Some(r) => output.push(r),
+                    Some(reply) => handle(reply),
                     None => break,
                 }
             }
         }
-        Ok(output)
+        Ok(())
     }
 
     pub fn wait(&self, timeout: Duration) -> io::Result<()> {
-        let mut fd_list = Vec::with_capacity(2);
-        for socket in self.v4.iter().chain(self.v6.iter()) {
-            fd_list.push(PollFd {
-                fd: socket.fd(),
-                events: POLLIN,
-                revents: 0,
-            });
+        // Fixed stack storage: at most one ping socket for each IP family.
+        let empty = PollFd { fd: -1, events: 0, revents: 0 };
+        let mut fds = [empty; 2];
+        let mut n = 0;
+        for sock in self.v4.iter().chain(self.v6.iter()) {
+            fds[n] = PollFd { fd: sock.fd(), events: POLLIN, revents: 0 };
+            n += 1;
         }
-        let millis = timeout.as_millis().min(200).min(c_int::MAX as u128) as c_int;
-        // SAFETY: fd_list is a valid writable slice for the synchronous poll call.
-        let result = unsafe { poll(fd_list.as_mut_ptr(), fd_list.len(), millis) };
+        // poll is interrupted by SIGINT/SIGTERM; do not wake every 200 ms.
+        // Round sub-millisecond waits up rather than spinning with poll(0).
+        let millis = timeout.as_micros().div_ceil(1000).min(60_000) as c_int;
+        // SAFETY: fds[..n] is initialized and writable until the synchronous call returns.
+        let result = unsafe { poll(fds.as_mut_ptr(), n, millis) };
         if result < 0 {
-            let e = io::Error::last_os_error();
-            if e.kind() != io::ErrorKind::Interrupted {
-                return Err(e);
+            let error = io::Error::last_os_error();
+            if error.kind() != io::ErrorKind::Interrupted {
+                return Err(error);
             }
         }
         Ok(())
@@ -386,6 +396,20 @@ mod tests {
         assert!(parse_reply(&reply[..23], true).is_none());
         reply[1] = 1;
         assert!(parse_reply(&reply, true).is_none());
+    }
+
+    #[test]
+    fn reusable_packet_preserves_payload_and_replaces_correlation() {
+        let mut packet = vec![0x42; 64];
+        write_echo_request(&mut packet, false, 5, 6, 7);
+        assert_eq!(packet[0], 8);
+        assert_eq!(packet[6..8], [0, 5]);
+        assert!(packet[24..].iter().all(|byte| *byte == 0x42));
+        write_echo_request(&mut packet, true, 42, 0x1122334455667788, 99);
+        assert_eq!(packet[0], 128);
+        assert_eq!(&packet[8..16], &0x1122334455667788_u64.to_be_bytes());
+        assert_eq!(&packet[16..24], &99_u64.to_be_bytes());
+        assert!(packet[24..].iter().all(|byte| *byte == 0x42));
     }
 
     #[test]

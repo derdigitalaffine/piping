@@ -49,6 +49,10 @@ jobs:
         run: |
           bash -n tests/linux_smoke.sh
           bash -n tests/benchmark_loopback.sh
+          bash -n tests/discovery_smoke.sh
+          bash -n tests/discovery_active_veth.sh
+          bash -n tests/benchmark_fastpath.sh
+          bash -n tests/compare_fastpath.sh
           CARGO_TARGET_DIR="$RUNNER_TEMP/piping-install-target" cargo install --locked --path . --root "$RUNNER_TEMP/piping-install" --no-default-features
           "$RUNNER_TEMP/piping-install/bin/piping" --version
           "$RUNNER_TEMP/piping-install/bin/piping" --help
@@ -78,6 +82,39 @@ jobs:
           fi
       - name: Smoke source-installed CLI under ping-group policy
         run: "$RUNNER_TEMP/piping-install/bin/piping -4 -c 2 127.0.0.1"
+      - name: Passive Layer-2 ARP/NDP rtnetlink discovery (no root)
+        shell: bash
+        run: bash tests/discovery_smoke.sh ./target/release/piping
+      - name: Active ARP discovery in disposable veth-only test network
+        shell: bash
+        run: |
+          set +e
+          bash tests/discovery_active_veth.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Active ARP veth test skipped: runner lacks network admin/raw socket capability"
+          else
+            exit "$rc"
+          fi
+      - name: High-rate 1000 PPS loopback benchmark
+        shell: bash
+        run: |
+          set +e
+          bash tests/benchmark_fastpath.sh ./target/release/piping
+          rc=$?
+          if [ "$rc" -eq 77 ]; then
+            echo "::warning::Fastpath benchmark skipped due to ICMP socket restrictions"
+          else
+            exit "$rc"
+          fi
+      - name: Compare old and optimized ICMP on the same runner
+        shell: bash
+        run: |
+          set -e
+          git fetch --no-tags origin 1c6176af860660fb3abee11ea4ecbdc865c84142 --depth=1
+          git worktree add --detach "$RUNNER_TEMP/piping-baseline" 1c6176af860660fb3abee11ea4ecbdc865c84142
+          CARGO_TARGET_DIR="$RUNNER_TEMP/piping-baseline-target" cargo build --release --locked --manifest-path "$RUNNER_TEMP/piping-baseline/Cargo.toml"
+          bash tests/compare_fastpath.sh "$RUNNER_TEMP/piping-baseline-target/release/piping" ./target/release/piping
       - name: Rate cap and CPU/memory loopback benchmark
         shell: bash
         run: |

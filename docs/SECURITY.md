@@ -38,3 +38,12 @@ Piping sendet ICMP-Echo-Pakete und verarbeitet fremde Netzwerkantworten. Risiken
 ## Scope & Reporting
 
 Das Werkzeug ist für die Diagnose eigener bzw. autorisierter Netze vorgesehen. Test-Harness benutzt Loopback und isolierte Netze. Offene Sicherheits-/Performance-Grenzen bleiben vor Release dokumentiert statt ignoriert.
+
+## Layer-2 Discovery – neue, getrennte Vertrauensgrenze
+
+- `piping discover` ist passiv (RTM_GETNEIGH/NETLINK_ROUTE) und sendet keine Pakete; Kernel-Cache-Zustände können veraltet, leer oder manipuliert sein.
+- Nur `piping discover --active CIDR --interface IFACE` öffnet einen Ethernet-`AF_PACKET`-Raw-Socket. Dies **erfordert** CAP_NET_RAW. Das Programm erhöht Rechte nicht selbst, startet keine Shell, schreibt keine Sysctls und ruft `sudo` nie auf.
+- Aktive Scans prüfen ein direkt am gewählten Interface angeschlossenes IPv4-Netz in `/proc/net/route`, erlauben maximal 256 Ziel-IPs, höchstens 100 Pakete/s, maximal 5s Empfangsfenster, und schließen eigene Quelladresse aus.
+- Ethernet-/ARP-Reply-Felder, Quell-/Ziel-MAC und solicited-IP werden validiert; ARP bietet **keine** kryptografische Authentifizierung (Spoofing möglich). IPv6-NDP-Discovery bleibt passiv.
+- Netlink-Attribute werden über geprüfte Byte-Slices analysiert, mit maximal 8192 Cache-Einträgen und 65-KiB wiederverwendetem Empfangspuffer. Keine Interpretation unsicherer Netlink-Daten als Terminal-Steuersequenzen.
+- Aktiver Linux-CI-Test nutzt ausschließlich ein temporäres veth-Paar und 198.18.0.0/30. Wenn Host-CAP_NET_ADMIN fehlt, wird **SKIP**, nicht PASS gemeldet.

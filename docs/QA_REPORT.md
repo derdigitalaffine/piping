@@ -66,3 +66,17 @@ cargo build --release --locked --all-features
 bash tests/linux_smoke.sh ./target/release/piping
 bash tests/benchmark_loopback.sh ./target/release/piping
 ```
+
+## M6 Fastpath/Layer-2 – neuer Branch, Abnahmestatus
+
+Neue Issues [#20](https://github.com/derdigitalaffine/piping/issues/20), [#21](https://github.com/derdigitalaffine/piping/issues/21), [#22](https://github.com/derdigitalaffine/piping/issues/22). Im Branch `feat/fastpath-l2-discovery` liegen neue Rust-Module und Tests für Zero-Allocation-ICMP-Sending, O(1)-Range-Scheduling, passive Linux-Arp/NDP-Rtnetlink sowie opt-in aktive Ethernet-ARP-Sweeps.
+
+**Wichtig: Für diese neue Implementierung existiert zum Zeitpunkt dieser Änderung keine erfolgreiche Rust-Compiler-/Linux-Abnahme.** GitHub Actions meldete mehrfach fehlgeschlagene/abgebrochene Jobs mit **0 ausgeführten Schritten** ([Beispiel #41817709591](https://github.com/derdigitalaffine/piping/actions/runs/41817709591)). Die frühere erfolgreiche CI #41807144867 belegt ausschließlich den Vorgänger-Stand und **nicht** den neuen L2-Code oder eine Performance-Steigerung.
+
+### Nachzuholende Belege
+
+- [ ] Rust 1.85 + stable fmt, clippy -D warnings, Tests, release/minimal/TUI builds.
+- [ ] 1000-PPS-Live-Loopback, CPU/RSS/Gesamtlaufzeit und wiederholter **Same-Runner-Vergleich** der alten Basis `1c6176af...` gegen das optimierte Binary über `tests/compare_fastpath.sh` (3 Läufe je Variante). Ohne die tatsächlichen CI-Ergebnisse keine behauptete Beschleunigung.
+- [ ] Passive ARP/NDP-Netlink-CLI mit leerem Cache und synthetischen fehlerhaften Netlink-Paketen.
+- [ ] Aktive ARP mit isolierten veth-Peers, CAP_NET_RAW, Interface-/Route-Check und gefälschten ARP-Antworten; fehlende CAP_NET_ADMIN im CI explizit SKIP.
+- [ ] Prüfung der zusätzlichen unsafe FFI-Wrapper, Speicher-/Rate-/Timeout-Obergrenzen.
