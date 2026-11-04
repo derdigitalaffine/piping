@@ -39,7 +39,7 @@ pub(crate) fn entropy_nonce() -> Result<u64, String> {
     Ok(u64::from_be_bytes(bytes))
 }
 
-fn emit(line: &str) {
+pub(crate) fn emit(line: &str) {
     let stdout = io::stdout();
     let mut lock = stdout.lock();
     let result = writeln!(lock, "{line}").and_then(|_| lock.flush());

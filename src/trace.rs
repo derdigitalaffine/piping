@@ -149,7 +149,7 @@ fn correlated(id: ProbeId, seq: u16, nonce: u64, token: u64) -> bool {
         && id.token.is_none_or(|t| t == token)
 }
 
-fn match_error(error: ErrorReply, target: IpAddr, seq: u16, nonce: u64, token: u64) -> bool {
+fn match_error(error: &ErrorReply, target: IpAddr, seq: u16, nonce: u64, token: u64) -> bool {
     error.destination == target && correlated(error.id, seq, nonce, token)
 }
 
@@ -168,7 +168,7 @@ fn probe(
         // Linux reports IPv4 Time Exceeded and Unreachable via MSG_ERRQUEUE.
         for _ in 0..32 {
             match sock.recv_error().map_err(|e| format!("trace error queue: {e}"))? {
-                Some(error) if match_error(error.clone(), target.ip(), seq, nonce, token) => {
+                Some(error) if match_error(&error, target.ip(), seq, nonce, token) => {
                     let rtt = start.elapsed().as_secs_f64() * 1000.0;
                     return Ok(match error.kind {
                         ErrorKind::Expired => Outcome::Router(error.router, rtt),
@@ -248,9 +248,9 @@ fn render_rows(hops: &[Hop], smoke: bool, ascii: bool, width: usize) -> Vec<Stri
 }
 
 fn text_cycle(hops: &[Hop], cycle: u32, dest: IpAddr, smoke: bool, ascii: bool) {
-    println!("pipi trace {dest} | cycle {cycle} | hop stats (ICMP)");
+    crate::engine::emit(&format!("pipi trace {dest} | cycle {cycle} | hop stats (ICMP)"));
     for row in render_rows(hops, smoke, ascii, 110) {
-        println!("{row}");
+        crate::engine::emit(&row);
     }
 }
 
@@ -278,10 +278,14 @@ pub fn run(args: &[String]) -> Result<i32, String> {
         cycle += 1;
         for ttl in 1..=options.hops {
             if crate::engine::interrupted() { break; }
-            if Instant::now() < next_send {
-                // Rate limit: no more than 20 ICMP Echo packets per second.
-                std::thread::sleep(next_send.saturating_duration_since(Instant::now()));
+            // Keep Ctrl-C responsive even if a user selects a five-second interval.
+            while Instant::now() < next_send && !crate::engine::interrupted() {
+                std::thread::sleep(
+                    next_send.saturating_duration_since(Instant::now())
+                        .min(Duration::from_millis(50)),
+                );
             }
+            if crate::engine::interrupted() { break; }
             next_send = Instant::now() + options.interval;
             let index = usize::from(ttl - 1);
             hops[index].stats.on_send();
@@ -369,9 +373,9 @@ mod tests {
             router: target, kind: ErrorKind::Expired,
             id: ProbeId { seq: 4, nonce: Some(44), token: Some(4) },
         };
-        assert!(match_error(error.clone(), target, 4, 44, 4));
-        assert!(!match_error(error.clone(), target, 5, 44, 4));
-        assert!(!match_error(error.clone(), target, 4, 42, 4));
-        assert!(!match_error(error, "127.0.0.2".parse().unwrap(), 4, 44, 4));
+        assert!(match_error(&error, target, 4, 44, 4));
+        assert!(!match_error(&error, target, 5, 44, 4));
+        assert!(!match_error(&error, target, 4, 42, 4));
+        assert!(!match_error(&error, "127.0.0.2".parse().unwrap(), 4, 44, 4));
     }
 }
