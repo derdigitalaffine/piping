@@ -16,7 +16,7 @@ struct WinSize {
 }
 
 unsafe extern "C" {
-    fn ioctl(fd: c_int, request: c_ulong, arg: *mut WinSize) -> c_int;
+    fn ioctl(fd: c_int, request: c_ulong, arg: *mut c_void) -> c_int;
 }
 
 pub struct Screen;

@@ -305,7 +305,7 @@ pub fn dump() -> Result<Vec<Neighbor>, String> {
                 buffer.as_mut_ptr().cast(),
                 buffer.len(),
                 0,
-                &mut src,
+                (&mut src as *mut SockAddrNl).cast(),
                 &mut src_len,
             )
         };

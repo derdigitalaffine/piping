@@ -47,7 +47,7 @@ struct PollFd {
 unsafe extern "C" {
     fn socket(domain: c_int, ty: c_int, protocol: c_int) -> c_int;
     fn close(fd: c_int) -> c_int;
-    fn ioctl(fd: c_int, request: c_ulong, arg: *mut IfReq) -> c_int;
+    fn ioctl(fd: c_int, request: c_ulong, arg: *mut c_void) -> c_int;
     fn bind(fd: c_int, addr: *const c_void, len: u32) -> c_int;
     fn sendto(
         fd: c_int,
