@@ -1,0 +1,19 @@
+[package]
+name = "piping"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+description = "Linux ICMP echo CLI: classic, fast, range and terminal latency smoke graph"
+publish = false
+
+[features]
+default = []
+tui = []
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[profile.dev]
+debug = 1

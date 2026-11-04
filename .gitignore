@@ -1,0 +1,7 @@
+/target/
+/*.log
+/.idea/
+/.vscode/
+/coverage/
+/perf-data/
+.DS_Store
